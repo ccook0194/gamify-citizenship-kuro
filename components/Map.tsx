@@ -1,36 +1,56 @@
-'use client'
+'use client';
 
-import React, { useState, useEffect, useRef } from 'react'
-import ExpandableChat from './ExpandableChat'
-import KuroStatus from '@/components/KuroStatus'
-import { Music2, Play, Pause, Volume2 } from 'lucide-react'
-import { Slider } from '@/components/ui/slider'
+import React, { useState, useEffect, useRef } from 'react';
+import ExpandableChat from './ExpandableChat';
+import KuroStatus from '@/components/KuroStatus';
+import { Music2, Play, Pause, Volume2 } from 'lucide-react';
+import { Slider } from '@/components/ui/slider';
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import {
-  Tooltip, TooltipContent, TooltipProvider, TooltipTrigger
-} from "@/components/ui/tooltip"
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+  DialogFooter,
+} from '@/components/ui/dialog';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
+import { Button } from '@/components/ui/button';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { ScrollArea } from '@/components/ui/scroll-area';
 import {
-  Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter
-} from "@/components/ui/dialog"
-import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
-import { Button } from "@/components/ui/button"
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
-import { ScrollArea } from "@/components/ui/scroll-area"
-import {
-  Cloud, Sun, CloudRain, CloudSun, CloudDrizzle, Users, Clock,
-  Coffee, TreesIcon as Tree, Building2, Mail, Home, Newspaper, ShoppingCart, Shirt,
-  Moon, Sunrise
-} from 'lucide-react'
-import CharacterStatsDialog from './CharacterStatsDialog'
-import AIAgentDialog from './AIAgentDialog'
+  Cloud,
+  Sun,
+  CloudRain,
+  CloudSun,
+  CloudDrizzle,
+  Users,
+  Clock,
+  Coffee,
+  TreesIcon as Tree,
+  Building2,
+  Mail,
+  Home,
+  Newspaper,
+  ShoppingCart,
+  Shirt,
+  Moon,
+  Sunrise,
+} from 'lucide-react';
+import CharacterStatsDialog from './CharacterStatsDialog';
+import AIAgentDialog from './AIAgentDialog';
 import moment from 'moment';
-import { useSelector } from "react-redux";
-import { RootState, useAppDispatch } from "@/redux/store";
-import { Agent } from "@/redux/types/agent";
-import { fetchAgentActivity } from "@/redux/slices/activitySlice";
-import { increaseInteract } from "@/redux/slices/interactionSlice";
-import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar'
-import { motion, AnimatePresence } from 'framer-motion'
-import { capitalizeFirstLetter } from '@/lib/utils'
+import { useSelector } from 'react-redux';
+import { RootState, useAppDispatch } from '@/redux/store';
+import { Agent } from '@/redux/types/agent';
+import { fetchAgentActivity } from '@/redux/slices/activitySlice';
+import { increaseInteract } from '@/redux/slices/interactionSlice';
+import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
+import { motion, AnimatePresence } from 'framer-motion';
+import { capitalizeFirstLetter } from '@/lib/utils';
+import { useRouter } from 'next/navigation';
+import { createClient } from '@supabase/supabase-js';
+import axios from 'axios';
 
 // Custom scrollbar styling
 const customScrollbarStyles = `
@@ -45,7 +65,7 @@ const customScrollbarStyles = `
     background-color: #ff5a78;
     border-radius: 3px;
   }
-`
+`;
 
 // Animation variants for UI elements
 const containerVariants = {
@@ -54,57 +74,56 @@ const containerVariants = {
     opacity: 1,
     scale: 1,
     transition: {
-      type: "spring",
+      type: 'spring',
       duration: 0.3,
       bounce: 0,
-      staggerChildren: 0.05
-    }
+      staggerChildren: 0.05,
+    },
   },
   exit: {
     opacity: 0,
     scale: 0.98,
     transition: {
       duration: 0.2,
-      ease: "easeOut"
-    }
-  }
-}
+      ease: 'easeOut',
+    },
+  },
+};
 
 const itemVariants = {
   hidden: { opacity: 0, x: -4 },
   show: {
     opacity: 1,
     x: 0,
-    transition: { 
-      type: "spring",
+    transition: {
+      type: 'spring',
       duration: 0.3,
-      bounce: 0
-    }
+      bounce: 0,
+    },
   },
-  exit: { 
+  exit: {
     opacity: 0,
     x: 4,
-    transition: { 
+    transition: {
       duration: 0.2,
-      ease: "easeOut"
-    }
-  }
-}
+      ease: 'easeOut',
+    },
+  },
+};
 
 const popoverVariants = {
   hidden: { opacity: 0, scale: 0.96, y: 4 },
-  show: { 
+  show: {
     opacity: 1,
     scale: 1,
     y: 0,
     transition: {
-      type: "spring",
+      type: 'spring',
       duration: 0.25,
-      bounce: 0
-    }
-  }
-}
-
+      bounce: 0,
+    },
+  },
+};
 
 // Define MovingClouds so they animate over the map.
 // You can adjust the duration, delay, and z-index as needed.
@@ -113,8 +132,8 @@ const MovingClouds = () => {
     { src: '/mapLayers/movingCloud1.png', top: '5%', duration: 90, delay: 0 },
     { src: '/mapLayers/movingCloud2.png', top: '10%', duration: 110, delay: 20 },
     { src: '/mapLayers/movingCloud3.png', top: '3%', duration: 80, delay: 10 },
-    { src: '/mapLayers/movingCloud4.png', top: '8%', duration: 100, delay: 30, },
-  ]
+    { src: '/mapLayers/movingCloud4.png', top: '8%', duration: 100, delay: 30 },
+  ];
   return (
     <>
       {clouds.map((cloud, index) => (
@@ -123,7 +142,7 @@ const MovingClouds = () => {
           src={cloud.src}
           alt="Moving Cloud"
           draggable={false}
-          onDragStart={e => e.preventDefault()}
+          onDragStart={(e) => e.preventDefault()}
           style={{
             position: 'absolute',
             top: cloud.top,
@@ -134,244 +153,403 @@ const MovingClouds = () => {
             // Place moving clouds above the panned layers but below UI overlays:
             zIndex: 100,
             animation: `moveCloud${index} ${cloud.duration}s linear infinite`,
-            animationDelay: `${cloud.delay}s`
+            animationDelay: `${cloud.delay}s`,
           }}
         />
       ))}
       <style jsx global>{`
         @keyframes moveCloud0 {
-          from { transform: translateX(0); }
-          to { transform: translateX(160vw); }
+          from {
+            transform: translateX(0);
+          }
+          to {
+            transform: translateX(160vw);
+          }
         }
         @keyframes moveCloud1 {
-          from { transform: translateX(0); }
-          to { transform: translateX(160vw); }
+          from {
+            transform: translateX(0);
+          }
+          to {
+            transform: translateX(160vw);
+          }
         }
         @keyframes moveCloud2 {
-          from { transform: translateX(0); }
-          to { transform: translateX(160vw); }
+          from {
+            transform: translateX(0);
+          }
+          to {
+            transform: translateX(160vw);
+          }
         }
         @keyframes moveCloud3 {
-          from { transform: translateX(0); }
-          to { transform: translateX(160vw); }
+          from {
+            transform: translateX(0);
+          }
+          to {
+            transform: translateX(160vw);
+          }
         }
       `}</style>
     </>
-  )
-}
+  );
+};
 
 interface Location {
-  id: number
-  name: string
+  id: number;
+  name: string;
   // Coordinates in percentage relative to 1920x1080
-  x: number
-  y: number
-  icon: JSX.Element
-  color: string
+  x: number;
+  y: number;
+  icon: JSX.Element;
+  color: string;
 }
 
 const locations: Location[] = [
-  { id: 1, name: "Coffee Shop", x: 81.35, y: 47.90, icon: <Coffee className="w-4 h-4" />, color: "from-amber-400 to-amber-600" },
-  { id: 2, name: "Park", x: 48.44, y: 48.98, icon: <Tree className="w-4 h-4" />, color: "from-green-400 to-green-600" },
-  { id: 3, name: "Office Building", x: 23.57, y: 34.81, icon: <Building2 className="w-4 h-4" />, color: "from-blue-400 to-blue-600" },
-  { id: 4, name: "Postal Office", x: 79.79, y: 76.20, icon: <Mail className="w-4 h-4" />, color: "from-red-400 to-red-600" },
-  { id: 5, name: "Kuro's House", x: 48.75, y: 87.59, icon: <Home className="w-4 h-4" />, color: "from-purple-400 to-purple-600" },
-  { id: 6, name: "Newspaper Stand", x: 27.86, y: 73.47, icon: <Newspaper className="w-4 h-4" />, color: "from-orange-400 to-orange-600" },
-  { id: 7, name: "Grocery Store", x: 52.50, y: 17.13, icon: <ShoppingCart className="w-4 h-4" />, color: "from-lime-400 to-lime-600" },
-  { id: 8, name: "Fashion Store", x: 67.02, y: 34.91, icon: <Shirt className="w-4 h-4" />, color: "from-pink-400 to-pink-600" },
-]
+  {
+    id: 1,
+    name: 'Coffee Shop',
+    x: 81.35,
+    y: 47.9,
+    icon: <Coffee className="w-4 h-4" />,
+    color: 'from-amber-400 to-amber-600',
+  },
+  {
+    id: 2,
+    name: 'Park',
+    x: 48.44,
+    y: 48.98,
+    icon: <Tree className="w-4 h-4" />,
+    color: 'from-green-400 to-green-600',
+  },
+  {
+    id: 3,
+    name: 'Office Building',
+    x: 23.57,
+    y: 34.81,
+    icon: <Building2 className="w-4 h-4" />,
+    color: 'from-blue-400 to-blue-600',
+  },
+  {
+    id: 4,
+    name: 'Town Hall',
+    x: 79.79,
+    y: 76.2,
+    icon: <Mail className="w-4 h-4" />,
+    color: 'from-red-400 to-red-600',
+  },
+  {
+    id: 5,
+    name: "Kuro's House",
+    x: 48.75,
+    y: 87.59,
+    icon: <Home className="w-4 h-4" />,
+    color: 'from-purple-400 to-purple-600',
+  },
+  {
+    id: 6,
+    name: 'Newspaper Stand',
+    x: 27.86,
+    y: 73.47,
+    icon: <Newspaper className="w-4 h-4" />,
+    color: 'from-orange-400 to-orange-600',
+  },
+  {
+    id: 7,
+    name: 'Grocery Store',
+    x: 52.5,
+    y: 17.13,
+    icon: <ShoppingCart className="w-4 h-4" />,
+    color: 'from-lime-400 to-lime-600',
+  },
+  {
+    id: 8,
+    name: 'Fashion Store',
+    x: 67.02,
+    y: 34.91,
+    icon: <Shirt className="w-4 h-4" />,
+    color: 'from-pink-400 to-pink-600',
+  },
+];
 
 const aiAgents = [
-  { id: 1, name: "Kuro", location: "Kuro's House", avatar: "/pfps/pfp1.png", color: 'bg-amber-600', isMainAgent: true },
-  { id: 2, name: "Theo", location: "Grocery Store", avatar: "/pfps/pfp2.png", color: 'bg-amber-600', isMainAgent: true },
-  { id: 3, name: "Milo", location: "Coffee Shop", avatar: "/pfps/pfp3.png", color: 'bg-amber-600', isMainAgent: true },
-  { id: 4, name: "Alice", location: "Coffee Shop", avatar: "/pfps/pfp6.png", color: 'bg-amber-600', isMainAgent: false },
-  { id: 5, name: "Bob", location: "Park", avatar: "", color: 'bg-green-600', isMainAgent: false },
-  { id: 6, name: "Klaus", location: "Office Building", avatar: "/pfps/pfp4.png", color: 'bg-blue-600', isMainAgent: false },
-  { id: 7, name: "Diana", location: "Postal Office", avatar: "", color: 'bg-red-600', isMainAgent: false },
-  { id: 8, name: "Ethan", location: "Newspaper Stand", avatar: "", color: 'bg-orange-600', isMainAgent: false },
-  { id: 9, name: "Ava", location: "Grocery Store", avatar: "/pfps/pfp5.png", color: 'bg-lime-600', isMainAgent: false },
-  { id: 10, name: "George", location: "Fashion Store", avatar: "", color: 'bg-pink-600', isMainAgent: false },
-]
+  {
+    id: 1,
+    name: 'Kuro',
+    location: "Kuro's House",
+    avatar: '/pfps/pfp1.png',
+    color: 'bg-amber-600',
+    isMainAgent: true,
+  },
+  {
+    id: 2,
+    name: 'Theo',
+    location: 'Grocery Store',
+    avatar: '/pfps/pfp2.png',
+    color: 'bg-amber-600',
+    isMainAgent: true,
+  },
+  {
+    id: 3,
+    name: 'Milo',
+    location: 'Coffee Shop',
+    avatar: '/pfps/pfp3.png',
+    color: 'bg-amber-600',
+    isMainAgent: true,
+  },
+  {
+    id: 4,
+    name: 'Alice',
+    location: 'Coffee Shop',
+    avatar: '/pfps/pfp6.png',
+    color: 'bg-amber-600',
+    isMainAgent: false,
+  },
+  { id: 5, name: 'Bob', location: 'Park', avatar: '', color: 'bg-green-600', isMainAgent: false },
+  {
+    id: 6,
+    name: 'Klaus',
+    location: 'Office Building',
+    avatar: '/pfps/pfp4.png',
+    color: 'bg-blue-600',
+    isMainAgent: false,
+  },
+  {
+    id: 7,
+    name: 'Diana',
+    location: 'Town Hall',
+    avatar: '',
+    color: 'bg-red-600',
+    isMainAgent: false,
+  },
+  {
+    id: 8,
+    name: 'Ethan',
+    location: 'Newspaper Stand',
+    avatar: '',
+    color: 'bg-orange-600',
+    isMainAgent: false,
+  },
+  {
+    id: 9,
+    name: 'Ava',
+    location: 'Grocery Store',
+    avatar: '/pfps/pfp5.png',
+    color: 'bg-lime-600',
+    isMainAgent: false,
+  },
+  {
+    id: 10,
+    name: 'George',
+    location: 'Fashion Store',
+    avatar: '',
+    color: 'bg-pink-600',
+    isMainAgent: false,
+  },
+];
 
 // Mapping for structures (hover effect controlled via buttons)
 const structureMapping: Record<string, string> = {
-  "_0007_house7": "Coffee Shop",
-  "_0002_fountain": "Park",
-  "_0000_house1": "Kuro's House",
-  "_0011_house10": "Grocery Store",
-  "_0004_house2": "Postal Office",
-  "_0008_house8": "Fashion Store",
-  "_0009_house9": "Office Building",
-  "_0005_house4": "Newspaper Stand",
-}
+  _0007_house7: 'Coffee Shop',
+  _0002_fountain: 'Park',
+  _0000_house1: "Kuro's House",
+  _0011_house10: 'Grocery Store',
+  _0004_house2: 'Town Hall',
+  _0008_house8: 'Fashion Store',
+  _0009_house9: 'Office Building',
+  _0005_house4: 'Newspaper Stand',
+};
 
 // Layers to be panned (exclude base clouds)
 const pannedLayers = [
-  { name: "_0013_street", width: 1920, height: 1080, top: 0, left: 0 },
-  { name: "_0012_trees4", width: 804, height: 269, top: 0, left: 534 },
-  { name: "_0011_house10", width: 516, height: 360, top: 5, left: 750 },
-  { name: "_0010_trees3", width: 746, height: 798, top: 199, left: 645 },
-  { name: "_0009_house9", width: 905, height: 518, top: 117, left: 0 },
-  { name: "_0008_house8", width: 682, height: 434, top: 160, left: 945 },
-  { name: "_0007_house7", width: 548, height: 296, top: 369, left: 1288 },
-  { name: "_0006_trees2", width: 282, height: 243, top: 530, left: 1638 },
-  { name: "_0005_house4", width: 1068, height: 573, top: 507, left: 1 },
-  { name: "_0004_house2", width: 610, height: 442, top: 602, left: 1227 },
-  { name: "_0003_lamps", width: 821, height: 556, top: 129, left: 418 },
-  { name: "_0002_fountain", width: 158, height: 194, top: 432, left: 851 },
-  { name: "_0001_trees1", width: 204, height: 188, top: 553, left: 933 },
-  { name: "_0000_house1", width: 752, height: 268, top: 812, left: 560 },
-]
+  { name: '_0013_street', width: 1920, height: 1080, top: 0, left: 0 },
+  { name: '_0012_trees4', width: 804, height: 269, top: 0, left: 534 },
+  { name: '_0011_house10', width: 516, height: 360, top: 5, left: 750 },
+  { name: '_0010_trees3', width: 746, height: 798, top: 199, left: 645 },
+  { name: '_0009_house9', width: 905, height: 518, top: 117, left: 0 },
+  { name: '_0008_house8', width: 682, height: 434, top: 160, left: 945 },
+  { name: '_0007_house7', width: 548, height: 296, top: 369, left: 1288 },
+  { name: '_0006_trees2', width: 282, height: 243, top: 530, left: 1638 },
+  { name: '_0005_house4', width: 1068, height: 573, top: 507, left: 1 },
+  { name: '_0004_house2', width: 610, height: 442, top: 602, left: 1227 },
+  { name: '_0003_lamps', width: 821, height: 556, top: 129, left: 418 },
+  { name: '_0002_fountain', width: 158, height: 194, top: 432, left: 851 },
+  { name: '_0001_trees1', width: 204, height: 188, top: 553, left: 933 },
+  { name: '_0000_house1', width: 752, height: 268, top: 812, left: 560 },
+];
 
 interface MapProps {
-  weather: string
-  currentEvent?: string
+  weather: string;
+  currentEvent?: string;
 }
 
 const MapComponent = ({ weather }: MapProps) => {
+  const router = useRouter();
   const dispatch = useAppDispatch();
 
   // Agents activities and Conversations from Redux
   const agents = useSelector((state: RootState) => state.agentActivity.agents as Agent[]);
   const conversations = useSelector((state: RootState) => state.agentActivity.conversations);
-  const time = useSelector((state: RootState) => state.agentActivity.time)
-  const date = useSelector((state: RootState) => state.agentActivity.date)
+  const time = useSelector((state: RootState) => state.agentActivity.time);
+  const date = useSelector((state: RootState) => state.agentActivity.date);
 
   // Panning and zoom state
-  const containerRef = useRef<HTMLDivElement>(null)
-  const [scale, setScale] = useState(1)
-  const [offset, setOffset] = useState({ x: 0, y: 0 })
-  const [isDragging, setIsDragging] = useState(false)
-  const [dragStart, setDragStart] = useState({ x: 0, y: 0 })
+  const containerRef = useRef<HTMLDivElement>(null);
+  const [scale, setScale] = useState(1);
+  const [offset, setOffset] = useState({ x: 0, y: 0 });
+  const [isDragging, setIsDragging] = useState(false);
+  const [dragStart, setDragStart] = useState({ x: 0, y: 0 });
   // Hover state (set via buttons only)
-  const [hoveredLocation, setHoveredLocation] = useState<string | null>(null)
+  const [hoveredLocation, setHoveredLocation] = useState<string | null>(null);
 
   // Initialize Kuro at his house
-  const [positions, setPositions] = useState<Array<string>>(aiAgents.map((agent) => agent.location))
-  const [selectedLocation, setSelectedLocation] = useState<Location | null>(null)
-  const [isLocationDialogOpen, setIsLocationDialogOpen] = useState(false)
-  const [isCharacterStatsDialogOpen, setIsCharacterStatsDialogOpen] = useState(false)
-  const [selectedCharacterName, setSelectedCharacterName] = useState('Kuro')
-  const [selectedAgent, setSelectedAgent] = useState<{ id: number, name: string, location: string, avatar: string, color: string, isMainAgent: boolean } | null>(null)
-  const [isAgentDialogOpen, setIsAgentDialogOpen] = useState(false)
-  const [currentTime, setCurrentTime] = useState(new Date(2025, 1, Math.floor(Math.random() * 4 + 1), 6, 0) )
-  const [isNight, setIsNight] = useState(false)
-  const [isPlaying, setIsPlaying] = useState(false)
-  const [volume, setVolume] = useState([0.5])
-  const audioRef = useRef<HTMLAudioElement>(null)
+  const [positions, setPositions] = useState<Array<string>>(
+    aiAgents.map((agent) => agent.location)
+  );
+  const [selectedLocation, setSelectedLocation] = useState<Location | null>(null);
+  const [isLocationDialogOpen, setIsLocationDialogOpen] = useState(false);
+  const [isCharacterStatsDialogOpen, setIsCharacterStatsDialogOpen] = useState(false);
+  const [selectedCharacterName, setSelectedCharacterName] = useState('Kuro');
+  const [selectedAgent, setSelectedAgent] = useState<{
+    id: number;
+    name: string;
+    location: string;
+    avatar: string;
+    color: string;
+    isMainAgent: boolean;
+  } | null>(null);
+  const [isAgentDialogOpen, setIsAgentDialogOpen] = useState(false);
+  const [currentTime, setCurrentTime] = useState(
+    new Date(2025, 1, Math.floor(Math.random() * 4 + 1), 6, 0)
+  );
+  const [isNight, setIsNight] = useState(false);
+  const [isPlaying, setIsPlaying] = useState(false);
+  const [volume, setVolume] = useState([0.5]);
+  const audioRef = useRef<HTMLAudioElement>(null);
 
   useEffect(() => {
     if (audioRef.current) {
-      audioRef.current.volume = volume[0]
+      audioRef.current.volume = volume[0];
     }
-  }, [volume])
+  }, [volume]);
 
   useEffect(() => {
     const updateScale = () => {
       if (containerRef.current) {
-        const containerWidth = containerRef.current.offsetWidth
-        setScale((containerWidth / 1920) * 1.2)
+        const containerWidth = containerRef.current.offsetWidth;
+        setScale((containerWidth / 1920) * 1.2);
       }
-    }
-    updateScale()
-    window.addEventListener('resize', updateScale)
-    return () => window.removeEventListener('resize', updateScale)
-  }, [])
+    };
+    updateScale();
+    window.addEventListener('resize', updateScale);
+    return () => window.removeEventListener('resize', updateScale);
+  }, []);
 
   const clampOffset = (newOffset: { x: number; y: number }) => {
-    if (!containerRef.current) return newOffset
-    const containerWidth = containerRef.current.offsetWidth
-    const containerHeight = containerRef.current.offsetHeight
-    const mapWidth = 1920 * scale
-    const mapHeight = 1080 * scale
-    const minX = containerWidth - mapWidth
-    const minY = containerHeight - mapHeight
+    if (!containerRef.current) return newOffset;
+    const containerWidth = containerRef.current.offsetWidth;
+    const containerHeight = containerRef.current.offsetHeight;
+    const mapWidth = 1920 * scale;
+    const mapHeight = 1080 * scale;
+    const minX = containerWidth - mapWidth;
+    const minY = containerHeight - mapHeight;
     return {
       x: Math.min(0, Math.max(newOffset.x, minX)),
-      y: Math.min(0, Math.max(newOffset.y, minY))
-    }
-  }
+      y: Math.min(0, Math.max(newOffset.y, minY)),
+    };
+  };
 
   const handleMouseDown = (e: React.MouseEvent<HTMLDivElement>) => {
-    setIsDragging(true)
-    setDragStart({ x: e.clientX - offset.x, y: e.clientY - offset.y })
-  }
+    setIsDragging(true);
+    setDragStart({ x: e.clientX - offset.x, y: e.clientY - offset.y });
+  };
   const handleMouseMove = (e: React.MouseEvent<HTMLDivElement>) => {
-    if (!isDragging) return
-    const newOffset = { x: e.clientX - dragStart.x, y: e.clientY - dragStart.y }
-    setOffset(clampOffset(newOffset))
-  }
+    if (!isDragging) return;
+    const newOffset = { x: e.clientX - dragStart.x, y: e.clientY - dragStart.y };
+    setOffset(clampOffset(newOffset));
+  };
   const handleMouseUp = () => {
-    setIsDragging(false)
-  }
+    setIsDragging(false);
+  };
 
   useEffect(() => {
     const timeInterval = setInterval(() => {
-      setCurrentTime(prevTime => {
-        const newTime = new Date(prevTime.getTime() + 60000)
-        setIsNight(newTime.getHours() >= 20 || newTime.getHours() < 6)
-        return newTime
-      })
-    }, 200)
-    return () => clearInterval(timeInterval)
-  }, [])
+      setCurrentTime((prevTime) => {
+        const newTime = new Date(prevTime.getTime() + 60000);
+        setIsNight(newTime.getHours() >= 20 || newTime.getHours() < 6);
+        return newTime;
+      });
+    }, 200);
+    return () => clearInterval(timeInterval);
+  }, []);
 
   useEffect(() => {
-    if ( moment(currentTime).format('YYYY-MM-DD') !== moment(currentTime).format('YYYY-MM-DD') )
-      handlePlanDate(currentTime)
+    if (moment(currentTime).format('YYYY-MM-DD') !== moment(currentTime).format('YYYY-MM-DD'))
+      handlePlanDate(currentTime);
 
-    if ( currentTime.getMinutes() % 30 == 0 && currentTime.getHours() >= 6 )
-        handleFetchActivity(currentTime)
-  }, [currentTime])
+    if (currentTime.getMinutes() % 30 == 0 && currentTime.getHours() >= 6)
+      handleFetchActivity(currentTime);
+  }, [currentTime]);
 
   useEffect(() => {
     if (!agents) return;
-    
-    let newPosition: Array<string> = []
-    aiAgents.forEach((agent) => {
-      const agentActivity = agents.find((item) => item.name == agent.name)
-      const newLocation = locations.find((location) => location.name == agentActivity?.location[0])
 
-      if ( newLocation ) newPosition.push(newLocation.name);
-      else newPosition.push(positions[agent.id - 1])
-    })
+    let newPosition: Array<string> = [];
+    aiAgents.forEach((agent) => {
+      const agentActivity = agents.find((item) => item.name == agent.name);
+      const newLocation = locations.find((location) => location.name == agentActivity?.location[0]);
+
+      if (newLocation) newPosition.push(newLocation.name);
+      else newPosition.push(positions[agent.id - 1]);
+    });
 
     setPositions(newPosition);
-  }, [agents])
+  }, [agents]);
 
   useEffect(() => {
-    if ( conversations ){
+    if (conversations) {
       Object.values(conversations!).forEach((conversation) => {
-        if ( conversation[0].length < 2 ) return ;
-        if ( conversation[0][0].name == 'Kuro' ) {
+        if (conversation[0].length < 2) return;
+        if (conversation[0][0].name == 'Kuro') {
           const aiAgent = getAgentWithName(conversation[0][1].name);
-          if ( aiAgent ) dispatch(increaseInteract({ index: aiAgent.id, date: `${moment(currentTime).format('YYYY-MM-DD')} ${time}` }))
+          if (aiAgent)
+            dispatch(
+              increaseInteract({
+                index: aiAgent.id,
+                date: `${moment(currentTime).format('YYYY-MM-DD')} ${time}`,
+              })
+            );
         }
-        if ( conversation[0][1].name == 'Kuro' ) {
+        if (conversation[0][1].name == 'Kuro') {
           const aiAgent = getAgentWithName(conversation[0][0].name);
-          if ( aiAgent ) dispatch(increaseInteract({ index: aiAgent.id, date: `${moment(currentTime).format('YYYY-MM-DD')} ${time}` }))
+          if (aiAgent)
+            dispatch(
+              increaseInteract({
+                index: aiAgent.id,
+                date: `${moment(currentTime).format('YYYY-MM-DD')} ${time}`,
+              })
+            );
         }
-      })
+      });
     }
-  }, [conversations])
+  }, [conversations]);
 
   const handlePlanDate = async (date: Date) => {
     try {
-      const response = await fetch("/api/plan", {
-        method: "POST",
+      const response = await fetch('/api/plan', {
+        method: 'POST',
         headers: {
-          "Content-Type": "application/json",
+          'Content-Type': 'application/json',
         },
         body: JSON.stringify({ date: moment(date).format('YYYY-MM-DD') }),
       });
 
-      if (!response.ok) throw new Error("Failed to fetch time");
+      if (!response.ok) throw new Error('Failed to fetch time');
 
       const data = await response.json();
       console.log('success plan: ' + data.success);
     } catch (error) {
-      console.error("Error fetching time:", error);
+      console.error('Error fetching time:', error);
     }
   };
 
@@ -380,36 +558,81 @@ const MapComponent = ({ weather }: MapProps) => {
   };
 
   const handleLocationClick = (location: Location) => {
-    setSelectedLocation(location)
-    setIsLocationDialogOpen(true)
-  }
+    setSelectedLocation(location);
+    setIsLocationDialogOpen(true);
+  };
 
   const handleCharacterClick = (name: string) => {
     setSelectedCharacterName(name);
-    setIsCharacterStatsDialogOpen(true)
-  }
-  const handleAgentClick = (agent: { id: number, name: string, location: string, avatar: string, color: string, isMainAgent: boolean }) => {
-    setSelectedAgent(agent)
-    setIsAgentDialogOpen(true)
-  }
+    setIsCharacterStatsDialogOpen(true);
+  };
+  const handleAgentClick = (agent: {
+    id: number;
+    name: string;
+    location: string;
+    avatar: string;
+    color: string;
+    isMainAgent: boolean;
+  }) => {
+    setSelectedAgent(agent);
+    setIsAgentDialogOpen(true);
+  };
   const getWeatherIcon = (weather: string) => {
     switch (weather) {
-      case 'sunny': return <Sun className="w-6 h-6 text-yellow-400" />
-      case 'partly cloudy': return <CloudSun className="w-6 h-6 text-gray-400" />
-      case 'cloudy': return <Cloud className="w-6 h-6 text-gray-400" />
-      case 'light rain': return <CloudDrizzle className="w-6 h-6 text-blue-400" />
-      case 'heavy rain': return <CloudRain className="w-6 h-6 text-blue-600" />
-      default: return <Sun className="w-6 h-6 text-yellow-400" />
+      case 'sunny':
+        return <Sun className="w-6 h-6 text-yellow-400" />;
+      case 'partly cloudy':
+        return <CloudSun className="w-6 h-6 text-gray-400" />;
+      case 'cloudy':
+        return <Cloud className="w-6 h-6 text-gray-400" />;
+      case 'light rain':
+        return <CloudDrizzle className="w-6 h-6 text-blue-400" />;
+      case 'heavy rain':
+        return <CloudRain className="w-6 h-6 text-blue-600" />;
+      default:
+        return <Sun className="w-6 h-6 text-yellow-400" />;
     }
-  }
+  };
   const getAgentsAtLocation = (locationName: string) => {
-    return aiAgents.filter(agent => positions[agent.id - 1] === locationName && !agent.isMainAgent)
-  }
+    return aiAgents.filter(
+      (agent) => positions[agent.id - 1] === locationName && !agent.isMainAgent
+    );
+  };
   const getAgentWithName = (name: string) => {
-    return aiAgents.find(agent => agent.name === name)
-  }
+    return aiAgents.find((agent) => agent.name === name);
+  };
   const getLocation = (location: string) => {
-    return locations.find((item) => item.name == location)
+    return locations.find((item) => item.name == location);
+  };
+
+  async function signInWithTwitter() {
+    const supabase = createClient(
+      process.env.NEXT_PUBLIC_SUPABASE_URL!,
+      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
+    );
+
+    const { data, error } = await supabase.auth.signInWithOAuth({
+      provider: 'twitter',
+      options: {
+        redirectTo: `${process.env.NEXT_PUBLIC_SITE_URL}/game`,
+      },
+    });
+
+    console.log(data, error, '--');
+  }
+
+  async function checkCitizenshipStatus(userId: string) {
+    if (userId) {
+      try {
+        const response = await axios.get(`/api/citizenship/status`, {
+          params: { user_id: userId },
+        });
+        window.alert(JSON.stringify(response?.data || {}));
+        console.log('Status Data:', response.data);
+      } catch (error) {
+        console.error('Error fetching status:', error);
+      }
+    }
   }
 
   return (
@@ -430,7 +653,7 @@ const MapComponent = ({ weather }: MapProps) => {
           backgroundPosition: 'center',
           backgroundAttachment: 'fixed',
           opacity: 1,
-          zIndex: 10
+          zIndex: 10,
         }}
       />
 
@@ -443,7 +666,7 @@ const MapComponent = ({ weather }: MapProps) => {
           width: '1920px',
           height: '1080px',
           transition: isDragging ? 'none' : 'transform 0.1s ease-out',
-          zIndex: 1
+          zIndex: 1,
         }}
       >
         <MovingClouds />
@@ -453,14 +676,14 @@ const MapComponent = ({ weather }: MapProps) => {
           const extraStyles =
             structureMapping[layer.name] === hoveredLocation
               ? { transform: 'scale(1.05)', filter: 'drop-shadow(0 0 8px rgba(255,255,255,0.3))' }
-              : {}
+              : {};
           return (
             <img
               key={layer.name}
               src={`/mapLayers/${layer.name}.png`}
               alt={layer.name}
               draggable={false}
-              onDragStart={e => e.preventDefault()}
+              onDragStart={(e) => e.preventDefault()}
               className="transition-all duration-200"
               style={{
                 position: 'absolute',
@@ -470,10 +693,10 @@ const MapComponent = ({ weather }: MapProps) => {
                 height: `${layer.height}px`,
                 zIndex: index + 2,
                 pointerEvents: 'none',
-                ...extraStyles
+                ...extraStyles,
               }}
             />
-          )
+          );
         })}
 
         {/* Map Location Buttons */}
@@ -501,36 +724,38 @@ const MapComponent = ({ weather }: MapProps) => {
                 className="w-64 p-0 bg-white border-2 border-black shadow-[4px_4px_0_0_black] rounded-2xl overflow-hidden bg-[url('/cloudspop.png')] bg-repeat bg-left-top bg-fixed"
               >
                 <div className="p-4 bg-pink-100 border-b-2 border-black">
-                <h3 className="text-lg font-bold text-black mb-2 font-title flex items-center gap-2">
-                  {location.icon}
-                  {location.name}
-                </h3>
-                <p className="text-sm text-black font-body">{getLocationDescription(location.name)}</p>
-                <Button 
-                  className="w-full mt-3 bg-black text-white hover:bg-black/80"
-                  onClick={() => handleLocationClick(location)}
-                >
-                  Visit Location
-                </Button>
-              </div>
-              <div className="p-4 bg-yellow-100">
-                <h4 className="text-sm font-semibold text-black mb-3 flex items-center font-title">
-                  <Users className="w-4 h-4 mr-2" />
-                  Characters Here
-                </h4>
-                <div className="space-y-2">
-                  {getAgentsAtLocation(location.name).map((agent) => (
-                    <Button
-                      key={'locationAgent' + agent.id}
-                      variant="secondary"
-                      size="sm"
-                      className="w-full justify-start text-left border-2 border-black shadow-[2px_2px_0_0_black] bg-white text-black hover:bg-white/90"
-                      onClick={() => handleAgentClick(agent)}
-                    >
-                      {agent.name}
-                    </Button>
-                  ))}
+                  <h3 className="text-lg font-bold text-black mb-2 font-title flex items-center gap-2">
+                    {location.icon}
+                    {location.name}
+                  </h3>
+                  <p className="text-sm text-black font-body">
+                    {getLocationDescription(location.name)}
+                  </p>
+                  <Button
+                    className="w-full mt-3 bg-black text-white hover:bg-black/80"
+                    onClick={() => handleLocationClick(location)}
+                  >
+                    Visit Location
+                  </Button>
                 </div>
+                <div className="p-4 bg-yellow-100">
+                  <h4 className="text-sm font-semibold text-black mb-3 flex items-center font-title">
+                    <Users className="w-4 h-4 mr-2" />
+                    Characters Here
+                  </h4>
+                  <div className="space-y-2">
+                    {getAgentsAtLocation(location.name).map((agent) => (
+                      <Button
+                        key={'locationAgent' + agent.id}
+                        variant="secondary"
+                        size="sm"
+                        className="w-full justify-start text-left border-2 border-black shadow-[2px_2px_0_0_black] bg-white text-black hover:bg-white/90"
+                        onClick={() => handleAgentClick(agent)}
+                      >
+                        {agent.name}
+                      </Button>
+                    ))}
+                  </div>
                 </div>
               </motion.div>
             </PopoverContent>
@@ -538,39 +763,48 @@ const MapComponent = ({ weather }: MapProps) => {
         ))}
 
         {/* Main Avatars */}
-        {aiAgents.map((agent) => (
-          agent.isMainAgent && (
-            <div
-              key={"AI Agents" + agent.id}
-              className="absolute transform -translate-x-1/2 -translate-y-1/2 transition-all duration-1000 ease-in-out"
-              style={{ left: `${getLocation(positions[agent.id - 1])!.x + 2 * Math.pow(-1, agent.id + Math.floor(agent.id / 2))}%`, top: `${getLocation(positions[agent.id - 1])!.y + 2 * Math.pow(-1, agent.id)}%`, zIndex: 102 }}
-            >
-              <TooltipProvider>
-                <Tooltip>
-                  <TooltipTrigger asChild>
-                    <Button
-                      onMouseEnter={() => setHoveredLocation("Kuro")}
-                      onMouseLeave={() => setHoveredLocation(null)}
-                      variant="ghost"
-                      className="w-12 h-12 rounded-full bg-black border-2 border-yellow-400 shadow-md transition-all duration-200 hover:scale-105 focus:outline-none focus:ring-2 focus:ring-yellow-300 focus:ring-opacity-50 p-0"
-                      onClick={(e) => handleCharacterClick(agent.name)}
-                      aria-label="Kuro's current location"
-                    >
-                      <Avatar className="w-10 h-10">
-                        <AvatarImage src={agent.avatar} alt={agent.name} />
-                        <AvatarFallback className={agent.color}>
-                          {agent.name.charAt(0)}
-                        </AvatarFallback>
-                      </Avatar>
-                    </Button>
-                  </TooltipTrigger>
-                  <TooltipContent>
-                    <p>{positions[agent.id - 1]}</p>
-                  </TooltipContent>
-                </Tooltip>
-              </TooltipProvider>
-            </div>
-        )))}
+        {aiAgents.map(
+          (agent) =>
+            agent.isMainAgent && (
+              <div
+                key={'AI Agents' + agent.id}
+                className="absolute transform -translate-x-1/2 -translate-y-1/2 transition-all duration-1000 ease-in-out"
+                style={{
+                  left: `${
+                    getLocation(positions[agent.id - 1])!.x +
+                    2 * Math.pow(-1, agent.id + Math.floor(agent.id / 2))
+                  }%`,
+                  top: `${getLocation(positions[agent.id - 1])!.y + 2 * Math.pow(-1, agent.id)}%`,
+                  zIndex: 102,
+                }}
+              >
+                <TooltipProvider>
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <Button
+                        onMouseEnter={() => setHoveredLocation('Kuro')}
+                        onMouseLeave={() => setHoveredLocation(null)}
+                        variant="ghost"
+                        className="w-12 h-12 rounded-full bg-black border-2 border-yellow-400 shadow-md transition-all duration-200 hover:scale-105 focus:outline-none focus:ring-2 focus:ring-yellow-300 focus:ring-opacity-50 p-0"
+                        onClick={(e) => handleCharacterClick(agent.name)}
+                        aria-label="Kuro's current location"
+                      >
+                        <Avatar className="w-10 h-10">
+                          <AvatarImage src={agent.avatar} alt={agent.name} />
+                          <AvatarFallback className={agent.color}>
+                            {agent.name.charAt(0)}
+                          </AvatarFallback>
+                        </Avatar>
+                      </Button>
+                    </TooltipTrigger>
+                    <TooltipContent>
+                      <p>{positions[agent.id - 1]}</p>
+                    </TooltipContent>
+                  </Tooltip>
+                </TooltipProvider>
+              </div>
+            )
+        )}
       </div>
 
       {/* Fixed UI Overlays (2% padding from edges) */}
@@ -607,10 +841,11 @@ const MapComponent = ({ weather }: MapProps) => {
               }}
               className="w-8 h-8 rounded-full bg-violet-500 hover:bg-violet-600 flex items-center justify-center transition-colors border border-black"
             >
-              {isPlaying ? 
-                <Pause className="w-4 h-4 text-white" /> : 
+              {isPlaying ? (
+                <Pause className="w-4 h-4 text-white" />
+              ) : (
                 <Play className="w-4 h-4 text-white translate-x-[1px]" />
-              }
+              )}
             </button>
             <div className="flex items-center space-x-2 min-w-[100px]">
               <Volume2 className="w-4 h-4 text-violet-600" />
@@ -632,7 +867,9 @@ const MapComponent = ({ weather }: MapProps) => {
       </div>
 
       {/* Dialogs */}
-      <style jsx global>{customScrollbarStyles}</style>
+      <style jsx global>
+        {customScrollbarStyles}
+      </style>
 
       <AnimatePresence>
         {isLocationDialogOpen && (
@@ -645,112 +882,205 @@ const MapComponent = ({ weather }: MapProps) => {
                 exit="exit"
                 className="sm:max-w-[600px] bg-white border-2 border-black shadow-[4px_4px_0_0_black] rounded-2xl overflow-hidden bg-[url('/cloudspop.png')] bg-repeat bg-left-top bg-fixed"
               >
-          <DialogHeader className="p-4 bg-pink-100 border-b-2 border-black">
-            <DialogTitle className="text-2xl font-bold text-black flex items-center gap-2 font-title">
-              {selectedLocation?.icon}
-              {selectedLocation?.name}
-            </DialogTitle>
-          </DialogHeader>
-          <Tabs defaultValue="info" className="w-full p-4">
-            <TabsList className="grid w-full grid-cols-3 p-1 bg-black rounded-xl mb-4">
-              <TabsTrigger value="info" className="data-[state=active]:bg-pink-100 data-[state=active]:text-black text-white">Information</TabsTrigger>
-              <TabsTrigger value="characters" className="data-[state=active]:bg-yellow-100 data-[state=active]:text-black text-white">Characters</TabsTrigger>
-              <TabsTrigger value="activities" className="data-[state=active]:bg-green-100 data-[state=active]:text-black text-white">Activities</TabsTrigger>
-            </TabsList>
-            <TabsContent value="info" className="mt-0 h-[250px] relative overflow-hidden">
-              <motion.div 
-                variants={itemVariants}
-                initial="hidden"
-                animate="show"
-                exit="exit"
-                className="absolute inset-0"
-              >
-                <DialogDescription className="text-black font-body bg-pink-50 p-4 rounded-2xl border-2 border-black shadow-[2px_2px_0_0_black] mb-4">
-                {selectedLocation && getLocationDescription(selectedLocation.name)}
-              </DialogDescription>
-              <div className="grid grid-cols-2 gap-4">
-                <div className="bg-yellow-100 p-4 rounded-2xl border-2 border-black shadow-[2px_2px_0_0_black]">
-                  <h4 className="text-sm font-semibold text-black mb-2 flex items-center font-title">
-                    <Clock className="w-4 h-4 mr-2" />
-                    Opening Hours
-                  </h4>
-                  <p className="text-sm text-black font-body">
-                    {selectedLocation && getLocationHours(selectedLocation.name)}
-                  </p>
-                </div>
-                <div className="bg-green-100 p-4 rounded-2xl border-2 border-black shadow-[2px_2px_0_0_black]">
-                  <h4 className="text-sm font-semibold text-black mb-2 flex items-center font-title">
-                    <Mail className="w-4 h-4 mr-2" />
-                    Location Details
-                  </h4>
-                  <p className="text-sm text-black font-body">
-                    {selectedLocation && getLocationDetails(selectedLocation.name)}
-                  </p>
-                </div>
-                </div>
-              </motion.div>
-            </TabsContent>
-            <TabsContent value="characters" className="mt-0 h-[250px] relative overflow-hidden">
-              <motion.div 
-                variants={itemVariants}
-                initial="hidden"
-                animate="show"
-                exit="exit"
-                className="absolute inset-0"
-              >
-                <ScrollArea className="h-full pr-4 custom-scrollbar">
-                {selectedLocation && getAgentsAtLocation(selectedLocation.name).map((agent) => (
-                  <div key={agent.id} className="flex items-center space-x-4 mb-4 p-4 bg-yellow-100 rounded-2xl border-2 border-black shadow-[2px_2px_0_0_black]">
-                    <Avatar className="w-10 h-10 border-2 border-black">
-                      <AvatarImage src={agent.avatar} alt={agent.name} />
-                      <AvatarFallback className={agent.color}>
-                        {agent.name.charAt(0)}
-                      </AvatarFallback>
-                    </Avatar>
-                    <div>
-                      <h4 className="text-sm font-semibold text-black font-title">{agent.name}</h4>
-                      <p className="text-xs text-black/70 font-body">From {agent.location}</p>
-                    </div>
-                    <Button
-                      variant="secondary"
-                      size="sm"
-                      className="ml-auto border-2 border-black shadow-[2px_2px_0_0_black] bg-white text-black hover:bg-white/90"
-                      onClick={() => handleAgentClick(agent)}
-                    >
-                      Interact
-                    </Button>
-                  </div>
-                ))}
-                </ScrollArea>
-              </motion.div>
-            </TabsContent>
-            <TabsContent value="activities" className="mt-0 h-[250px] relative overflow-hidden">
-              <motion.div 
-                variants={itemVariants}
-                initial="hidden"
-                animate="show"
-                exit="exit"
-                className="absolute inset-0"
-              >
-                <ScrollArea className="h-full pr-4 custom-scrollbar">
-                {selectedLocation && getLocationActivities(selectedLocation.name).map((activity, index) => (
-                  <div key={index} className="mb-4 p-4 bg-green-100 rounded-2xl border-2 border-black shadow-[2px_2px_0_0_black]">
-                    <h4 className="text-sm font-semibold text-black mb-2 font-title">{activity.name}</h4>
-                    <p className="text-xs text-black/70 font-body">{activity.description}</p>
-                  </div>
-                ))}
-                </ScrollArea>
-              </motion.div>
-            </TabsContent>
-          </Tabs>
-          <DialogFooter className="mt-4 p-4 bg-pink-50 border-t-2 border-black">
-            <Button 
-              onClick={() => setIsLocationDialogOpen(false)}
-              className="bg-black text-white hover:bg-black/80"
-            >
-              Close
-            </Button>
-          </DialogFooter>
+                <DialogHeader className="p-4 bg-pink-100 border-b-2 border-black">
+                  <DialogTitle className="text-2xl font-bold text-black flex items-center gap-2 font-title">
+                    {selectedLocation?.icon}
+                    {selectedLocation?.name}
+                  </DialogTitle>
+                </DialogHeader>
+
+                {selectedLocation?.name === 'Town Hall' ? (
+                  <>
+                    <Tabs defaultValue="info" className="w-full p-4 text-center">
+                      <TabsList className="grid-cols-3 p-1 bg-black rounded-xl mb-4">
+                        <TabsTrigger
+                          value="apply-citizenship"
+                          className="data-[state=active]:bg-yellow-100 data-[state=active]:text-black text-white"
+                        >
+                          Apply for Citizenship
+                        </TabsTrigger>
+                        <TabsTrigger
+                          value="citizenship-status"
+                          className="data-[state=active]:bg-pink-100 data-[state=active]:text-black text-white"
+                        >
+                          Check Status
+                        </TabsTrigger>
+                      </TabsList>
+                      <TabsContent
+                        value="apply-citizenship"
+                        className="mt-0 h-[250px] relative overflow-hidden"
+                      >
+                        <motion.div
+                          variants={itemVariants}
+                          initial="hidden"
+                          animate="show"
+                          exit="exit"
+                          className="absolute inset-0"
+                          onClick={signInWithTwitter}
+                        >
+                          <DialogDescription className="text-black font-body bg-pink-50 p-4 rounded-2xl border-2 border-black shadow-[2px_2px_0_0_black] mb-4">
+                            Click here for Twitter OAuth
+                          </DialogDescription>
+                        </motion.div>
+                      </TabsContent>
+                      <TabsContent
+                        value="citizenship-status"
+                        className="mt-0 h-[250px] relative overflow-hidden"
+                      >
+                        <DialogDescription
+                          onClick={() =>
+                            checkCitizenshipStatus('5e1b41dc-2ce6-426d-bbd3-c8656e2b6238')
+                          }
+                          className="text-black font-body bg-pink-50 p-4 rounded-2xl border-2 border-black shadow-[2px_2px_0_0_black] mb-4"
+                        >
+                          Check status
+                        </DialogDescription>{' '}
+                      </TabsContent>
+                    </Tabs>
+                  </>
+                ) : (
+                  <>
+                    <Tabs defaultValue="info" className="w-full p-4">
+                      <TabsList className="grid w-full grid-cols-3 p-1 bg-black rounded-xl mb-4">
+                        <TabsTrigger
+                          value="info"
+                          className="data-[state=active]:bg-pink-100 data-[state=active]:text-black text-white"
+                        >
+                          Information
+                        </TabsTrigger>
+                        <TabsTrigger
+                          value="characters"
+                          className="data-[state=active]:bg-yellow-100 data-[state=active]:text-black text-white"
+                        >
+                          Characters
+                        </TabsTrigger>
+                        <TabsTrigger
+                          value="activities"
+                          className="data-[state=active]:bg-green-100 data-[state=active]:text-black text-white"
+                        >
+                          Activities
+                        </TabsTrigger>
+                      </TabsList>
+                      <TabsContent value="info" className="mt-0 h-[250px] relative overflow-hidden">
+                        <motion.div
+                          variants={itemVariants}
+                          initial="hidden"
+                          animate="show"
+                          exit="exit"
+                          className="absolute inset-0"
+                        >
+                          <DialogDescription className="text-black font-body bg-pink-50 p-4 rounded-2xl border-2 border-black shadow-[2px_2px_0_0_black] mb-4">
+                            {selectedLocation && getLocationDescription(selectedLocation.name)}
+                          </DialogDescription>
+                          <div className="grid grid-cols-2 gap-4">
+                            <div className="bg-yellow-100 p-4 rounded-2xl border-2 border-black shadow-[2px_2px_0_0_black]">
+                              <h4 className="text-sm font-semibold text-black mb-2 flex items-center font-title">
+                                <Clock className="w-4 h-4 mr-2" />
+                                Opening Hours
+                              </h4>
+                              <p className="text-sm text-black font-body">
+                                {selectedLocation && getLocationHours(selectedLocation.name)}
+                              </p>
+                            </div>
+                            <div className="bg-green-100 p-4 rounded-2xl border-2 border-black shadow-[2px_2px_0_0_black]">
+                              <h4 className="text-sm font-semibold text-black mb-2 flex items-center font-title">
+                                <Mail className="w-4 h-4 mr-2" />
+                                Location Details
+                              </h4>
+                              <p className="text-sm text-black font-body">
+                                {selectedLocation && getLocationDetails(selectedLocation.name)}
+                              </p>
+                            </div>
+                          </div>
+                        </motion.div>
+                      </TabsContent>
+                      <TabsContent
+                        value="characters"
+                        className="mt-0 h-[250px] relative overflow-hidden"
+                      >
+                        <motion.div
+                          variants={itemVariants}
+                          initial="hidden"
+                          animate="show"
+                          exit="exit"
+                          className="absolute inset-0"
+                        >
+                          <ScrollArea className="h-full pr-4 custom-scrollbar">
+                            {selectedLocation &&
+                              getAgentsAtLocation(selectedLocation.name).map((agent) => (
+                                <div
+                                  key={agent.id}
+                                  className="flex items-center space-x-4 mb-4 p-4 bg-yellow-100 rounded-2xl border-2 border-black shadow-[2px_2px_0_0_black]"
+                                >
+                                  <Avatar className="w-10 h-10 border-2 border-black">
+                                    <AvatarImage src={agent.avatar} alt={agent.name} />
+                                    <AvatarFallback className={agent.color}>
+                                      {agent.name.charAt(0)}
+                                    </AvatarFallback>
+                                  </Avatar>
+                                  <div>
+                                    <h4 className="text-sm font-semibold text-black font-title">
+                                      {agent.name}
+                                    </h4>
+                                    <p className="text-xs text-black/70 font-body">
+                                      From {agent.location}
+                                    </p>
+                                  </div>
+                                  <Button
+                                    variant="secondary"
+                                    size="sm"
+                                    className="ml-auto border-2 border-black shadow-[2px_2px_0_0_black] bg-white text-black hover:bg-white/90"
+                                    onClick={() => handleAgentClick(agent)}
+                                  >
+                                    Interact
+                                  </Button>
+                                </div>
+                              ))}
+                          </ScrollArea>
+                        </motion.div>
+                      </TabsContent>
+                      <TabsContent
+                        value="activities"
+                        className="mt-0 h-[250px] relative overflow-hidden"
+                      >
+                        <motion.div
+                          variants={itemVariants}
+                          initial="hidden"
+                          animate="show"
+                          exit="exit"
+                          className="absolute inset-0"
+                        >
+                          <ScrollArea className="h-full pr-4 custom-scrollbar">
+                            {selectedLocation &&
+                              getLocationActivities(selectedLocation.name).map(
+                                (activity, index) => (
+                                  <div
+                                    key={index}
+                                    className="mb-4 p-4 bg-green-100 rounded-2xl border-2 border-black shadow-[2px_2px_0_0_black]"
+                                  >
+                                    <h4 className="text-sm font-semibold text-black mb-2 font-title">
+                                      {activity.name}
+                                    </h4>
+                                    <p className="text-xs text-black/70 font-body">
+                                      {activity.description}
+                                    </p>
+                                  </div>
+                                )
+                              )}
+                          </ScrollArea>
+                        </motion.div>
+                      </TabsContent>
+                    </Tabs>
+                    <DialogFooter className="mt-4 p-4 bg-pink-50 border-t-2 border-black">
+                      <Button
+                        onClick={() => setIsLocationDialogOpen(false)}
+                        className="bg-black text-white hover:bg-black/80"
+                      >
+                        Close
+                      </Button>
+                    </DialogFooter>
+                  </>
+                )}
               </motion.div>
             </DialogContent>
           </Dialog>
@@ -758,143 +1088,209 @@ const MapComponent = ({ weather }: MapProps) => {
       </AnimatePresence>
 
       {/* Kuro Stats Dialog */}
-      <CharacterStatsDialog open={isCharacterStatsDialogOpen} onOpenChange={setIsCharacterStatsDialogOpen} name={selectedCharacterName} />
+      <CharacterStatsDialog
+        open={isCharacterStatsDialogOpen}
+        onOpenChange={setIsCharacterStatsDialogOpen}
+        name={selectedCharacterName}
+      />
 
       {/* AI Agent Dialog */}
-      <AIAgentDialog open={isAgentDialogOpen} onOpenChange={setIsAgentDialogOpen} agent={selectedAgent} date={currentTime} />
-      
+      <AIAgentDialog
+        open={isAgentDialogOpen}
+        onOpenChange={setIsAgentDialogOpen}
+        agent={selectedAgent}
+        date={currentTime}
+      />
+
       {/* Expandable Chat */}
       <ExpandableChat currentTime={currentTime} />
     </div>
-  )
-}
+  );
+};
 
 function getLocationDescription(locationName: string) {
   switch (locationName) {
-    case "Coffee Shop":
-      return "A cozy spot where Kuro can watch people and enjoy the aroma of coffee. The warm atmosphere and gentle chatter make it a perfect place for Kuro to relax and observe human behavior."
-    case "Park":
-      return "A lush green space with plenty of trees for Kuro to climb and explore. The park offers various exciting smells, birds to watch, and occasionally other friendly animals to interact with."
-    case "Office Building":
-      return "A tall building with lots of windows, perfect for Kuro to observe the busy human world. The constant movement of people and the occasional open window provide endless entertainment."
-    case "Postal Office":
-      return "An interesting place with various smells and packages that pique Kuro's curiosity. The constant flow of people and parcels keeps Kuro engaged and intrigued."
+    case 'Coffee Shop':
+      return 'A cozy spot where Kuro can watch people and enjoy the aroma of coffee. The warm atmosphere and gentle chatter make it a perfect place for Kuro to relax and observe human behavior.';
+    case 'Park':
+      return 'A lush green space with plenty of trees for Kuro to climb and explore. The park offers various exciting smells, birds to watch, and occasionally other friendly animals to interact with.';
+    case 'Office Building':
+      return 'A tall building with lots of windows, perfect for Kuro to observe the busy human world. The constant movement of people and the occasional open window provide endless entertainment.';
+    case 'Town Hall':
+      return "An interesting place with various smells and packages that pique Kuro's curiosity. The constant flow of people and parcels keeps Kuro engaged and intrigued.";
     case "Kuro's House":
-      return "Kuro's safe haven, filled with comfortable spots for napping and playing. This is where Kuro feels most at home, with familiar scents and cozy corners to curl up in."
-    case "Newspaper Stand":
-      return "A small booth with fresh papers that Kuro finds irresistible to sit on. The crisp smell of new print and the occasional treat from the friendly vendor make this a favorite spot."
-    case "Grocery Store":
-      return "A place full of interesting smells and potential for finding dropped treats. The variety of scents from fresh produce to the deli counter keeps Kuro's senses stimulated."
-    case "Fashion Store":
-      return "A store with soft fabrics and many hiding spots for Kuro to explore. The changing rooms and clothing racks provide excellent places for an adventurous cat to investigate."
+      return "Kuro's safe haven, filled with comfortable spots for napping and playing. This is where Kuro feels most at home, with familiar scents and cozy corners to curl up in.";
+    case 'Newspaper Stand':
+      return 'A small booth with fresh papers that Kuro finds irresistible to sit on. The crisp smell of new print and the occasional treat from the friendly vendor make this a favorite spot.';
+    case 'Grocery Store':
+      return "A place full of interesting smells and potential for finding dropped treats. The variety of scents from fresh produce to the deli counter keeps Kuro's senses stimulated.";
+    case 'Fashion Store':
+      return 'A store with soft fabrics and many hiding spots for Kuro to explore. The changing rooms and clothing racks provide excellent places for an adventurous cat to investigate.';
     default:
-      return "An interesting location in Kuro's world."
+      return "An interesting location in Kuro's world.";
   }
 }
 
 function getLocationHours(locationName: string) {
   switch (locationName) {
-    case "Coffee Shop":
-      return "Open daily: 6:00 AM - 10:00 PM"
-    case "Park":
-      return "Open 24/7"
-    case "Office Building":
-      return "Monday - Friday: 8:00 AM - 6:00 PM"
-    case "Postal Office":
-      return "Monday - Saturday: 9:00 AM - 5:00 PM"
+    case 'Coffee Shop':
+      return 'Open daily: 6:00 AM - 10:00 PM';
+    case 'Park':
+      return 'Open 24/7';
+    case 'Office Building':
+      return 'Monday - Friday: 8:00 AM - 6:00 PM';
+    case 'Town Hall':
+      return 'Monday - Saturday: 9:00 AM - 5:00 PM';
     case "Kuro's House":
-      return "Always open for Kuro!"
-    case "Newspaper Stand":
-      return "Daily: 5:00 AM - 7:00 PM"
-    case "Grocery Store":
-      return "Daily: 7:00 AM - 11:00 PM"
-    case "Fashion Store":
-      return "Monday - Saturday: 10:00 AM - 9:00 PM, Sunday: 11:00 AM - 6:00 PM"
+      return 'Always open for Kuro!';
+    case 'Newspaper Stand':
+      return 'Daily: 5:00 AM - 7:00 PM';
+    case 'Grocery Store':
+      return 'Daily: 7:00 AM - 11:00 PM';
+    case 'Fashion Store':
+      return 'Monday - Saturday: 10:00 AM - 9:00 PM, Sunday: 11:00 AM - 6:00 PM';
     default:
-      return "Hours vary"
+      return 'Hours vary';
   }
 }
 
 function getLocationDetails(locationName: string) {
   switch (locationName) {
-    case "Coffee Shop":
-      return "A quaint two-story building with outdoor seating and a cozy interior."
-    case "Park":
-      return "Sprawling green space with walking paths, a pond, and plenty of trees."
-    case "Office Building":
-      return "Modern high-rise in the heart of downtown with 20 floors of offices."
-    case "Postal Office":
-      return "Classic brick building with multiple service counters and a sorting area."
+    case 'Coffee Shop':
+      return 'A quaint two-story building with outdoor seating and a cozy interior.';
+    case 'Park':
+      return 'Sprawling green space with walking paths, a pond, and plenty of trees.';
+    case 'Office Building':
+      return 'Modern high-rise in the heart of downtown with 20 floors of offices.';
+    case 'Town Hall':
+      return 'Classic brick building with multiple service counters and a sorting area.';
     case "Kuro's House":
-      return "Charming two-bedroom home with a spacious backyard and cat-friendly features."
-    case "Newspaper Stand":
-      return "Compact kiosk located on a busy street corner, always buzzing with activity."
-    case "Grocery Store":
-      return "Large supermarket with wide aisles and a diverse selection of products."
-    case "Fashion Store":
-      return "Trendy boutique with large display windows and multiple changing rooms."
+      return 'Charming two-bedroom home with a spacious backyard and cat-friendly features.';
+    case 'Newspaper Stand':
+      return 'Compact kiosk located on a busy street corner, always buzzing with activity.';
+    case 'Grocery Store':
+      return 'Large supermarket with wide aisles and a diverse selection of products.';
+    case 'Fashion Store':
+      return 'Trendy boutique with large display windows and multiple changing rooms.';
     default:
-      return "Unique location in Kuro's world."
+      return "Unique location in Kuro's world.";
   }
 }
 
 function getLocationActivities(locationName: string) {
   switch (locationName) {
-    case "Coffee Shop":
+    case 'Coffee Shop':
       return [
-        { name: "People Watching", description: "Observe the diverse clientele and their interactions." },
-        { name: "Nap in Sunbeam", description: "Find a cozy spot by the window for a peaceful nap." },
-        { name: "Beg for Treats", description: "Try your luck with friendly customers for a tasty morsel." }
-      ]
-    case "Park":
+        {
+          name: 'People Watching',
+          description: 'Observe the diverse clientele and their interactions.',
+        },
+        {
+          name: 'Nap in Sunbeam',
+          description: 'Find a cozy spot by the window for a peaceful nap.',
+        },
+        {
+          name: 'Beg for Treats',
+          description: 'Try your luck with friendly customers for a tasty morsel.',
+        },
+      ];
+    case 'Park':
       return [
-        { name: "Tree Climbing", description: "Test your agility on various trees throughout the park." },
-        { name: "Bird Watching", description: "Observe the local bird population from hidden vantage points." },
-        { name: "Butterfly Chase", description: "Engage in a playful pursuit of colorful butterflies." }
-      ]
-    case "Office Building":
+        {
+          name: 'Tree Climbing',
+          description: 'Test your agility on various trees throughout the park.',
+        },
+        {
+          name: 'Bird Watching',
+          description: 'Observe the local bird population from hidden vantage points.',
+        },
+        {
+          name: 'Butterfly Chase',
+          description: 'Engage in a playful pursuit of colorful butterflies.',
+        },
+      ];
+    case 'Office Building':
       return [
-        { name: "Window Perching", description: "Find the perfect windowsill for a bird's eye view of the city." },
-        { name: "Paper Chase", description: "Investigate loose papers and their intriguing rustling sounds." },
-        { name: "Elevator Ride", description: "Sneak into the elevator for an exciting vertical adventure." }
-      ]
-    case "Postal Office":
+        {
+          name: 'Window Perching',
+          description: "Find the perfect windowsill for a bird's eye view of the city.",
+        },
+        {
+          name: 'Paper Chase',
+          description: 'Investigate loose papers and their intriguing rustling sounds.',
+        },
+        {
+          name: 'Elevator Ride',
+          description: 'Sneak into the elevator for an exciting vertical adventure.',
+        },
+      ];
+    case 'Town Hall':
       return [
-        { name: "Box Inspection", description: "Examine various packages and their interesting scents." },
-        { name: "Stamp Collection", description: "Hunt for fallen stamps and add them to your collection." },
-        { name: "Mail Cart Ride", description: "Hitch a ride on a moving mail cart for a tour of the facility." }
-      ]
+        {
+          name: 'Box Inspection',
+          description: 'Examine various packages and their interesting scents.',
+        },
+        {
+          name: 'Stamp Collection',
+          description: 'Hunt for fallen stamps and add them to your collection.',
+        },
+        {
+          name: 'Mail Cart Ride',
+          description: 'Hitch a ride on a moving mail cart for a tour of the facility.',
+        },
+      ];
     case "Kuro's House":
       return [
-        { name: "Sunbathing", description: "Find the perfect sunny spot for a relaxing sunbath." },
-        { name: "Toy Mouse Hunt", description: "Search for hidden toy mice throughout the house." },
-        { name: "Cardboard Box Fun", description: "Explore new cardboard boxes and make them your fort." }
-      ]
-    case "Newspaper Stand":
+        { name: 'Sunbathing', description: 'Find the perfect sunny spot for a relaxing sunbath.' },
+        { name: 'Toy Mouse Hunt', description: 'Search for hidden toy mice throughout the house.' },
+        {
+          name: 'Cardboard Box Fun',
+          description: 'Explore new cardboard boxes and make them your fort.',
+        },
+      ];
+    case 'Newspaper Stand':
       return [
-        { name: "Paper Surfing", description: "Slide across freshly laid out newspapers." },
-        { name: "Headline Reading", description: "Attempt to decipher the latest news headlines." },
-        { name: "Magazine Tower Toppling", description: "Carefully knock over stacks of magazines." }
-      ]
-    case "Grocery Store":
+        { name: 'Paper Surfing', description: 'Slide across freshly laid out newspapers.' },
+        { name: 'Headline Reading', description: 'Attempt to decipher the latest news headlines.' },
+        {
+          name: 'Magazine Tower Toppling',
+          description: 'Carefully knock over stacks of magazines.',
+        },
+      ];
+    case 'Grocery Store':
       return [
-        { name: "Produce Inspection", description: "Investigate the various scents in the produce section." },
-        { name: "Box Fort Building", description: "Create a fort using empty cardboard boxes." },
-        { name: "Fish Counter Stakeout", description: "Watch the activity at the fish counter with great interest." }
-      ]
-    case "Fashion Store":
+        {
+          name: 'Produce Inspection',
+          description: 'Investigate the various scents in the produce section.',
+        },
+        { name: 'Box Fort Building', description: 'Create a fort using empty cardboard boxes.' },
+        {
+          name: 'Fish Counter Stakeout',
+          description: 'Watch the activity at the fish counter with great interest.',
+        },
+      ];
+    case 'Fashion Store':
       return [
-        { name: "Clothing Rack Hide and Seek", description: "Find the perfect hiding spot among the clothes." },
-        { name: "Dressing Room Mirror Play", description: "Interact with your reflection in the dressing room mirrors." },
-        { name: "Mannequin Observation", description: "Study the strange, motionless humans on display." }
-      ]
+        {
+          name: 'Clothing Rack Hide and Seek',
+          description: 'Find the perfect hiding spot among the clothes.',
+        },
+        {
+          name: 'Dressing Room Mirror Play',
+          description: 'Interact with your reflection in the dressing room mirrors.',
+        },
+        {
+          name: 'Mannequin Observation',
+          description: 'Study the strange, motionless humans on display.',
+        },
+      ];
     default:
       return [
-        { name: "Explore", description: "Discover the unique features of this location." },
-        { name: "Nap", description: "Find a cozy spot for a quick nap." },
-        { name: "People Watch", description: "Observe the comings and goings of visitors." }
-      ]
+        { name: 'Explore', description: 'Discover the unique features of this location.' },
+        { name: 'Nap', description: 'Find a cozy spot for a quick nap.' },
+        { name: 'People Watch', description: 'Observe the comings and goings of visitors.' },
+      ];
   }
 }
 
-export default MapComponent
+export default MapComponent;
