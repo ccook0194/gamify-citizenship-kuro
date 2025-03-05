@@ -1,0 +1,59 @@
+.landingButton {
+  --primary: 99, 179, 237;
+  --secondary: 76, 81, 191;
+  border: none;
+  outline: none;
+  cursor: pointer;
+  user-select: none;
+  touch-action: manipulation;
+  outline: 4px solid rgba(var(--primary), 0.5);
+  border-radius: 12px;
+  position: relative;
+  transition: 0.3s;
+  width: 200px;
+  height: 60px;
+  margin: 1rem;
+}
+
+.landingButton:hover {
+  transform: translateY(-2px);
+  outline: 4px solid rgba(var(--primary), 0.8);
+}
+
+.back {
+  background: rgb(var(--secondary));
+  border-radius: 12px;
+  position: absolute;
+  left: 0;
+  top: 0;
+  width: 100%;
+  height: 100%;
+}
+
+.front {
+  background: linear-gradient(0deg, rgba(var(--primary), 0.6) 20%, rgb(var(--primary)) 50%);
+  box-shadow: 0 0.5em 1em -0.2em rgba(var(--secondary), 0.5);
+  border-radius: 12px;
+  position: absolute;
+  border: 1px solid rgb(var(--secondary));
+  left: 0;
+  top: 0;
+  width: 100%;
+  height: 100%;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  font-size: 1.25rem;
+  font-weight: 600;
+  font-family: inherit;
+  transform: translateY(-15%);
+  transition: 0.15s;
+  color: white;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+}
+
+.landingButton:active .front {
+  transform: translateY(0%);
+  box-shadow: 0 0;
+}
