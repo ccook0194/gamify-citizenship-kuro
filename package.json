@@ -6,7 +6,10 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "lint": "next lint"
+    "lint": "next lint",
+    "delete_migration": "rm -rf drizzle/*",
+    "generate_migration": "npx drizzle-kit generate --config=drizzle.config.ts",
+    "apply_migration": "npx drizzle-kit migrate --config=drizzle.config.ts"
   },
   "dependencies": {
     "@fontsource/dynapuff": "^5.1.1",

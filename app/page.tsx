@@ -1,19 +1,19 @@
-'use client'
+'use client';
 
-import { LandingButton } from '@/components/ui/landing-button'
-import Image from 'next/image'
-import { Button } from '@/components/ui/button'
-import { Input } from '@/components/ui/input'
-import { useState } from 'react'
-import { useAuth } from "../context/AuthContext";
+import { LandingButton } from '@/components/ui/landing-button';
+import Image from 'next/image';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { useState } from 'react';
+import { useAuth } from '../context/AuthContext';
 
 export default function Home() {
   const { authorized, loading, login } = useAuth();
-  const [password, setPassword] = useState("")
+  const [password, setPassword] = useState('');
 
   const submitPassword = async () => {
-    login(password)
-  }
+    login(password);
+  };
 
   const handlePasswordChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setPassword(e.target.value);
@@ -22,49 +22,40 @@ export default function Home() {
   return (
     <div className="min-h-screen flex flex-col items-center justify-center bg-white relative">
       <div className="fixed inset-0 pointer-events-none">
-        <Image
-          src="/cloudsblue.png"
-          alt="Clouds"
-          fill
-          style={{ objectFit: 'cover' }}
-          priority
-        />
+        <Image src="/cloudsblue.png" alt="Clouds" fill style={{ objectFit: 'cover' }} priority />
       </div>
       <div className="text-center space-y-8 mb-8">
-        <h1 className="text-5xl font-bold [font-family:DynaPuff] text-[#53C3FF]"> 
+        <h1 className="text-5xl font-bold [font-family:DynaPuff] text-[#53C3FF]">
           Kuro&apos;s Adventure
         </h1>
-        { authorized ? 
-          <p className="text-slate-700 text-lg">Choose your destination</p> :
+        {authorized ? (
+          <p className="text-slate-700 text-lg">Choose your destination</p>
+        ) : (
           <p className="text-slate-700 text-lg">Enter Security Code</p>
-        }
+        )}
       </div>
-      
+
       <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
-        { authorized ? (<>
-          <LandingButton href="/game">
-            Game
-          </LandingButton>
-          <LandingButton href="/dashboard">
-            Dashboard
-          </LandingButton>
-        </>) : (
+        {authorized ? (
+          <>
+            <LandingButton href="/game">Game</LandingButton>
+          </>
+        ) : (
           <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
-            <Input 
+            <Input
               className="text-black"
               type="password"
               name="password"
               onChange={handlePasswordChange}
-              value={password}></Input>
-            { loading ? (
+              value={password}
+            ></Input>
+            {loading ? (
               <div className="flex justify-center items-center gap-4">
                 <div className="w-8 h-8 border-4 border-slate-900 border-t-transparent rounded-full animate-spin"></div>
                 <span className="text-slate-900 font-['DynaPuff'] text-lg">Going...</span>
               </div>
             ) : (
-              <Button
-                variant="outline"
-                onClick={submitPassword}>
+              <Button variant="outline" onClick={submitPassword}>
                 Go
               </Button>
             )}
@@ -83,5 +74,5 @@ export default function Home() {
         />
       </div>
     </div>
-  )
+  );
 }

@@ -9,7 +9,6 @@ export const authOptions: NextAuthOptions = {
       version: '2.0', // Use OAuth 2.0
     }),
   ],
-  debug: true,
   callbacks: {
     async jwt({ token, account }) {
       if (account) {
@@ -22,8 +21,6 @@ export const authOptions: NextAuthOptions = {
       return session;
     },
     async signIn({ account, profile }) {
-      console.log('Account:', account);
-      console.log('Profile:', profile);
       return true;
     },
   },
