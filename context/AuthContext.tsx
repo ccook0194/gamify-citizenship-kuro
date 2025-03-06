@@ -1,17 +1,18 @@
-'use client'
+'use client';
 
-import { createContext, useState, useEffect, useContext, ReactNode } from "react"
-import { useRouter } from "next/navigation"
+import { createContext, useState, useEffect, useContext, ReactNode } from 'react';
+import { useRouter } from 'next/navigation';
+import { SessionProvider } from 'next-auth/react';
 
 // Define the Auth Context type
 interface AuthContextType {
-  authorized: boolean
-  loading: boolean
-  login: (password: string) => void
-  logout: () => void
+  authorized: boolean;
+  loading: boolean;
+  login: (password: string) => void;
+  logout: () => void;
 }
 
-const AuthContext = createContext<AuthContextType | undefined>(undefined)
+const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 interface AuthProviderProps {
   children: ReactNode;
@@ -24,7 +25,7 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
   const router = useRouter();
 
   useEffect(() => {
-    const isAuth = localStorage.getItem("authorized");
+    const isAuth = localStorage.getItem('authorized');
     if (isAuth) {
       setAuthorized(true);
     }
@@ -33,35 +34,37 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
 
   // Login Function
   const login = async (password: string) => {
-    setLoading(true)
+    setLoading(true);
 
     const res = await fetch('/api/login', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ password }),
-    })
-    setLoading(false)
+    });
+    setLoading(false);
 
     if (res.ok) {
-      setAuthorized(true)
-      localStorage.setItem("authorized", JSON.stringify(true))
+      setAuthorized(true);
+      localStorage.setItem('authorized', JSON.stringify(true));
     } else {
       alert('Invalid credentials');
     }
-    router.push("/")
+    router.push('/');
   };
 
   // Logout Function
   const logout = () => {
     setAuthorized(false);
-    localStorage.removeItem("user");
-    router.push("/");
+    localStorage.removeItem('user');
+    router.push('/');
   };
 
   return (
-    <AuthContext.Provider value={{ authorized, login, logout, loading }}>
-      {children}
-    </AuthContext.Provider>
+    <SessionProvider>
+      <AuthContext.Provider value={{ authorized, login, logout, loading }}>
+        {children}
+      </AuthContext.Provider>
+    </SessionProvider>
   );
 };
 
@@ -69,7 +72,7 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
 export const useAuth = (): AuthContextType => {
   const context = useContext(AuthContext);
   if (!context) {
-    throw new Error("useAuth must be used within an AuthProvider");
+    throw new Error('useAuth must be used within an AuthProvider');
   }
   return context;
 };
