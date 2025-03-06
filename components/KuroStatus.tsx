@@ -176,7 +176,15 @@ export default function KuroWorld({ citizenshipApplication }: any) {
                 <>
                   {/* Status */}
                   <motion.div
-                    className="rounded-2xl border-2 border-black bg-green-100 p-3 shadow-[2px_2px_0_0_black] mb-2"
+                    className={`
+                  ${
+                    citizenshipApplication?.status === 'pending'
+                      ? 'bg-yellow-100'
+                      : citizenshipApplication?.status === 'rejected'
+                      ? 'bg-red-300'
+                      : 'bg-green-200'
+                  }  
+                    rounded-2xl border-2 border-black p-3 shadow-[2px_2px_0_0_black] mb-2`}
                     variants={itemVariants}
                     {...hoverPop}
                   >
@@ -184,10 +192,19 @@ export default function KuroWorld({ citizenshipApplication }: any) {
                       <Verified className="w-5 h-5 text-blue-600" />
                       <h3 className="text-sm font-title font-bold text-black">Status</h3>
                     </div>
-                    <p className="text-sm text-black italic capitalize">
-                      {citizenshipApplication?.status || 'Checking status...'}
+                    <p className="text-sm text-gray-800 italic capitalize">
+                      {citizenshipApplication?.status
+                        ? `Citizenship ${citizenshipApplication?.status}`
+                        : 'Checking status...'}
                     </p>
+
+                    {citizenshipApplication?.status === 'rejected' && (
+                      <p className="text-xs text-gray-600 italic">
+                        ({citizenshipApplication?.status_remark})
+                      </p>
+                    )}
                   </motion.div>
+
                   {/* Ticket Id */}
                   <motion.div
                     className="rounded-2xl border-2 border-black bg-white p-3 shadow-[2px_2px_0_0_black] mb-2"

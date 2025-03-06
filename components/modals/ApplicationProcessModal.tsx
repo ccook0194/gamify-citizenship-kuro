@@ -6,6 +6,7 @@ import { useSession } from 'next-auth/react';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import { Send } from 'lucide-react';
+import { RadioGroup, RadioGroupItem } from '../ui/radio-group';
 
 const itemVariants = {
   hidden: { opacity: 0, y: 20 },
@@ -21,7 +22,7 @@ const questions = [
   {
     id: '1',
     type: 'question',
-    text: "Welcome to Kuro Town! I'm Mayor. Before we get started, I'd love to learn more about you!, What is your name? ",
+    text: "Welcome to Kuro Town! I'm Mayor. Before we get started, I'd love to learn more about you!, Are you already registered with us?",
   },
   {
     id: '2',
@@ -72,7 +73,19 @@ export default function ApplicationProcessModal() {
   >([questions[0]]);
   const [currentQuestionIndex, setCurrentQuestionIndex] = useState<number>(0);
   const [inputValue, setInputValue] = useState<string>('');
+  const [isRegistered, setIsRegistered] = useState<boolean | null>(null);
 
+  const handleRadioSelection = (value: string) => {
+    setIsRegistered(value === 'yes');
+    if (value === 'no') {
+      setMessages([
+        ...messages,
+        { id: '2', type: 'answer', text: value },
+        { id: '3', type: 'question', text: questions[1].text },
+      ]);
+      setCurrentQuestionIndex(1);
+    }
+  };
   const handleNextQuestion = () => {
     if (inputValue.trim() !== '') {
       const newMessages = [
@@ -113,10 +126,30 @@ export default function ApplicationProcessModal() {
       ) : (
         <>
           {messages.map((msg) => (
-            <ChatItemInterface chat={msg} />
+            <ChatItemInterface
+              chat={msg}
+              isRegistered={isRegistered}
+              handleRadioSelection={handleRadioSelection}
+            />
           ))}
 
-          {currentQuestionIndex < 5 && (
+          {isRegistered === null && (
+            <motion.div
+              className="rounded-2xl border-2 border-black bg-white p-3 shadow-[2px_2px_0_0_black] w-1/2 max-w-sm mb-2 self-end ml-auto"
+              variants={itemVariants}
+            >
+              <RadioGroup onValueChange={handleRadioSelection} className="mt-4 flex justify-around">
+                <label className="flex items-center space-x-2 text-gray-600">
+                  <RadioGroupItem value="yes" /> <span>Yes</span>
+                </label>
+                <label className="flex items-center space-x-2 text-gray-600 ml-">
+                  <RadioGroupItem value="no" /> <span>No</span>
+                </label>
+              </RadioGroup>
+            </motion.div>
+          )}
+
+          {isRegistered === false && currentQuestionIndex > 0 && currentQuestionIndex < 5 && (
             <div className="w-full mt-4 relative">
               <Textarea
                 value={inputValue}
@@ -143,22 +176,40 @@ export default function ApplicationProcessModal() {
   );
 }
 
-const ChatItemInterface = ({ chat }: { chat: any }) => {
+const ChatItemInterface = ({
+  chat,
+  isRegistered,
+  handleRadioSelection,
+}: {
+  chat: any;
+  isRegistered: boolean | null;
+  handleRadioSelection: (value: string) => void;
+}) => {
   return chat.type === 'question' ? (
-    <motion.div
-      className="rounded-2xl border-2 border-black bg-blue-100 p-3 shadow-[2px_2px_0_0_black] w-auto max-w-sm mb-2"
-      variants={itemVariants}
-    >
-      <p className="text-xs text-gray-600">
-        <TypingEffect text={chat.text} />
-      </p>
-    </motion.div>
+    <>
+      <motion.div
+        className="rounded-2xl border-2 border-black bg-blue-100 p-3 shadow-[2px_2px_0_0_black] w-auto max-w-sm mb-2"
+        variants={itemVariants}
+      >
+        <p className="text-xs text-gray-600">
+          <TypingEffect text={chat.text} />
+        </p>
+      </motion.div>
+
+      {isRegistered === true && (
+        <Button onClick={() => signIn('twitter')} className="mt-4 bg-blue-500 text-white">
+          Login with Twitter
+        </Button>
+      )}
+    </>
   ) : (
-    <motion.div
-      className="rounded-2xl border-2 border-black bg-white p-3 shadow-[2px_2px_0_0_black] w-auto max-w-sm mb-2 self-end ml-auto"
-      variants={itemVariants}
-    >
-      <p className="text-xs text-gray-600">{chat.text}</p>
-    </motion.div>
+    <>
+      <motion.div
+        className="rounded-2xl border-2 border-black bg-white p-3 shadow-[2px_2px_0_0_black] w-auto max-w-sm mb-2 self-end ml-auto"
+        variants={itemVariants}
+      >
+        <p className="text-xs text-gray-600">{chat.text}</p>
+      </motion.div>
+    </>
   );
 };

@@ -26,7 +26,14 @@ async function generateUniqueTicketNumber(): Promise<string> {
 export async function POST(req: Request) {
   try {
     const body = await req.json();
-    const { twitter_id, twitter_name, twitter_profile_picture, twitter_username } = body;
+    const {
+      twitter_id,
+      twitter_name,
+      twitter_profile_picture,
+      twitter_username,
+      status,
+      status_remark,
+    } = body;
 
     if (!twitter_id) {
       return NextResponse.json({ error: 'Missing twitter_id' }, { status: 400 });
@@ -58,7 +65,8 @@ export async function POST(req: Request) {
         ticket_number: ticketNumber,
         twitter_profile_picture,
         twitter_username,
-        status: 'pending',
+        status,
+        status_remark,
         created_at: sql`NOW()`,
         updated_at: sql`NOW()`,
       })

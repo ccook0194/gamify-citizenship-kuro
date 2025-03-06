@@ -8,6 +8,7 @@ export const citizenshipApplications = pgTable('citizenship_applications', {
   twitter_profile_picture: text('twitter_profile_picture'),
   ticket_number: text('ticket_number').unique().notNull(),
   status: text('status', { enum: ['pending', 'approved', 'rejected'] }).default('pending'),
+  status_remark: text('status_remark'),
   created_at: timestamp('created_at').defaultNow(),
   updated_at: timestamp('updated_at')
     .defaultNow()
