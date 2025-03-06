@@ -50,7 +50,9 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { capitalizeFirstLetter } from '@/lib/utils';
 import { useRouter } from 'next/navigation';
 import axios from 'axios';
-import { signIn } from 'next-auth/react';
+import ApplicationProcessModal from './modals/ApplicationProcessModal';
+import Image from 'next/image';
+import ImagesLinks from '@/utils/ImagesLinks';
 import { useSession } from 'next-auth/react';
 
 // Custom scrollbar styling
@@ -236,7 +238,7 @@ const locations: Location[] = [
     name: 'Town Hall',
     x: 79.79,
     y: 76.2,
-    icon: <Mail className="w-4 h-4" />,
+    icon: <Image src={ImagesLinks.mayor} alt="Town Hall" width={48} height={48} />,
     color: 'from-red-400 to-red-600',
   },
   {
@@ -621,9 +623,6 @@ const MapComponent = ({ weather }: MapProps) => {
     }
   }
 
-  // if (status === 'loading') return <p>Loading...</p>;
-  // if (!session) return <p>Not logged in</p>;
-
   return (
     <div
       ref={containerRef}
@@ -878,198 +877,156 @@ const MapComponent = ({ weather }: MapProps) => {
                   </DialogTitle>
                 </DialogHeader>
 
-                {selectedLocation?.name === 'Town Hall' ? (
-                  <>
-                    <Tabs defaultValue="info" className="w-full p-4 text-center">
-                      <TabsList className="grid-cols-3 p-1 bg-black rounded-xl mb-4">
-                        <TabsTrigger
-                          value="apply-citizenship"
-                          className="data-[state=active]:bg-yellow-100 data-[state=active]:text-black text-white"
-                        >
-                          Apply for Citizenship
-                        </TabsTrigger>
-                        <TabsTrigger
-                          value="citizenship-status"
-                          className="data-[state=active]:bg-pink-100 data-[state=active]:text-black text-white"
-                        >
-                          Check Status
-                        </TabsTrigger>
-                      </TabsList>
-                      <TabsContent
-                        value="apply-citizenship"
-                        className="mt-0 h-[250px] relative overflow-hidden"
-                      >
-                        <motion.div
-                          variants={itemVariants}
-                          initial="hidden"
-                          animate="show"
-                          exit="exit"
-                          className="absolute inset-0"
-                          onClick={() => signIn('twitter')}
-                        >
-                          <DialogDescription className="text-black font-body bg-pink-50 p-4 rounded-2xl border-2 border-black shadow-[2px_2px_0_0_black] mb-4">
-                            Click here for Twitter OAuth
-                          </DialogDescription>
-                        </motion.div>
-                      </TabsContent>
-                      <TabsContent
-                        value="citizenship-status"
-                        className="mt-0 h-[250px] relative overflow-hidden"
-                      >
-                        <DialogDescription
-                          onClick={() =>
-                            checkCitizenshipStatus('5e1b41dc-2ce6-426d-bbd3-c8656e2b6238')
-                          }
-                          className="text-black font-body bg-pink-50 p-4 rounded-2xl border-2 border-black shadow-[2px_2px_0_0_black] mb-4"
-                        >
-                          Check status
-                        </DialogDescription>{' '}
-                      </TabsContent>
-                    </Tabs>
-                  </>
-                ) : (
-                  <>
-                    <Tabs defaultValue="info" className="w-full p-4">
-                      <TabsList className="grid w-full grid-cols-3 p-1 bg-black rounded-xl mb-4">
-                        <TabsTrigger
+                <div className="max-h-[75vh] overflow-y-auto scroll-smooth">
+                  {selectedLocation?.name === 'Town Hall' && status !== 'authenticated' ? (
+                    <ApplicationProcessModal />
+                  ) : (
+                    <>
+                      <Tabs defaultValue="info" className="w-full p-4">
+                        <TabsList className="grid w-full grid-cols-3 p-1 bg-black rounded-xl mb-4">
+                          <TabsTrigger
+                            value="info"
+                            className="data-[state=active]:bg-pink-100 data-[state=active]:text-black text-white"
+                          >
+                            Information
+                          </TabsTrigger>
+                          <TabsTrigger
+                            value="characters"
+                            className="data-[state=active]:bg-yellow-100 data-[state=active]:text-black text-white"
+                          >
+                            Characters
+                          </TabsTrigger>
+                          <TabsTrigger
+                            value="activities"
+                            className="data-[state=active]:bg-green-100 data-[state=active]:text-black text-white"
+                          >
+                            Activities
+                          </TabsTrigger>
+                        </TabsList>
+                        <TabsContent
                           value="info"
-                          className="data-[state=active]:bg-pink-100 data-[state=active]:text-black text-white"
+                          className="mt-0 h-[250px] relative overflow-hidden"
                         >
-                          Information
-                        </TabsTrigger>
-                        <TabsTrigger
+                          <motion.div
+                            variants={itemVariants}
+                            initial="hidden"
+                            animate="show"
+                            exit="exit"
+                            className="absolute inset-0"
+                          >
+                            <DialogDescription className="text-black font-body bg-pink-50 p-4 rounded-2xl border-2 border-black shadow-[2px_2px_0_0_black] mb-4">
+                              {selectedLocation && getLocationDescription(selectedLocation.name)}
+                            </DialogDescription>
+                            <div className="grid grid-cols-2 gap-4">
+                              <div className="bg-yellow-100 p-4 rounded-2xl border-2 border-black shadow-[2px_2px_0_0_black]">
+                                <h4 className="text-sm font-semibold text-black mb-2 flex items-center font-title">
+                                  <Clock className="w-4 h-4 mr-2" />
+                                  Opening Hours
+                                </h4>
+                                <p className="text-sm text-black font-body">
+                                  {selectedLocation && getLocationHours(selectedLocation.name)}
+                                </p>
+                              </div>
+                              <div className="bg-green-100 p-4 rounded-2xl border-2 border-black shadow-[2px_2px_0_0_black]">
+                                <h4 className="text-sm font-semibold text-black mb-2 flex items-center font-title">
+                                  <Mail className="w-4 h-4 mr-2" />
+                                  Location Details
+                                </h4>
+                                <p className="text-sm text-black font-body">
+                                  {selectedLocation && getLocationDetails(selectedLocation.name)}
+                                </p>
+                              </div>
+                            </div>
+                          </motion.div>
+                        </TabsContent>
+                        <TabsContent
                           value="characters"
-                          className="data-[state=active]:bg-yellow-100 data-[state=active]:text-black text-white"
+                          className="mt-0 h-[250px] relative overflow-hidden"
                         >
-                          Characters
-                        </TabsTrigger>
-                        <TabsTrigger
-                          value="activities"
-                          className="data-[state=active]:bg-green-100 data-[state=active]:text-black text-white"
-                        >
-                          Activities
-                        </TabsTrigger>
-                      </TabsList>
-                      <TabsContent value="info" className="mt-0 h-[250px] relative overflow-hidden">
-                        <motion.div
-                          variants={itemVariants}
-                          initial="hidden"
-                          animate="show"
-                          exit="exit"
-                          className="absolute inset-0"
-                        >
-                          <DialogDescription className="text-black font-body bg-pink-50 p-4 rounded-2xl border-2 border-black shadow-[2px_2px_0_0_black] mb-4">
-                            {selectedLocation && getLocationDescription(selectedLocation.name)}
-                          </DialogDescription>
-                          <div className="grid grid-cols-2 gap-4">
-                            <div className="bg-yellow-100 p-4 rounded-2xl border-2 border-black shadow-[2px_2px_0_0_black]">
-                              <h4 className="text-sm font-semibold text-black mb-2 flex items-center font-title">
-                                <Clock className="w-4 h-4 mr-2" />
-                                Opening Hours
-                              </h4>
-                              <p className="text-sm text-black font-body">
-                                {selectedLocation && getLocationHours(selectedLocation.name)}
-                              </p>
-                            </div>
-                            <div className="bg-green-100 p-4 rounded-2xl border-2 border-black shadow-[2px_2px_0_0_black]">
-                              <h4 className="text-sm font-semibold text-black mb-2 flex items-center font-title">
-                                <Mail className="w-4 h-4 mr-2" />
-                                Location Details
-                              </h4>
-                              <p className="text-sm text-black font-body">
-                                {selectedLocation && getLocationDetails(selectedLocation.name)}
-                              </p>
-                            </div>
-                          </div>
-                        </motion.div>
-                      </TabsContent>
-                      <TabsContent
-                        value="characters"
-                        className="mt-0 h-[250px] relative overflow-hidden"
-                      >
-                        <motion.div
-                          variants={itemVariants}
-                          initial="hidden"
-                          animate="show"
-                          exit="exit"
-                          className="absolute inset-0"
-                        >
-                          <ScrollArea className="h-full pr-4 custom-scrollbar">
-                            {selectedLocation &&
-                              getAgentsAtLocation(selectedLocation.name).map((agent) => (
-                                <div
-                                  key={agent.id}
-                                  className="flex items-center space-x-4 mb-4 p-4 bg-yellow-100 rounded-2xl border-2 border-black shadow-[2px_2px_0_0_black]"
-                                >
-                                  <Avatar className="w-10 h-10 border-2 border-black">
-                                    <AvatarImage src={agent.avatar} alt={agent.name} />
-                                    <AvatarFallback className={agent.color}>
-                                      {agent.name.charAt(0)}
-                                    </AvatarFallback>
-                                  </Avatar>
-                                  <div>
-                                    <h4 className="text-sm font-semibold text-black font-title">
-                                      {agent.name}
-                                    </h4>
-                                    <p className="text-xs text-black/70 font-body">
-                                      From {agent.location}
-                                    </p>
-                                  </div>
-                                  <Button
-                                    variant="secondary"
-                                    size="sm"
-                                    className="ml-auto border-2 border-black shadow-[2px_2px_0_0_black] bg-white text-black hover:bg-white/90"
-                                    onClick={() => handleAgentClick(agent)}
-                                  >
-                                    Interact
-                                  </Button>
-                                </div>
-                              ))}
-                          </ScrollArea>
-                        </motion.div>
-                      </TabsContent>
-                      <TabsContent
-                        value="activities"
-                        className="mt-0 h-[250px] relative overflow-hidden"
-                      >
-                        <motion.div
-                          variants={itemVariants}
-                          initial="hidden"
-                          animate="show"
-                          exit="exit"
-                          className="absolute inset-0"
-                        >
-                          <ScrollArea className="h-full pr-4 custom-scrollbar">
-                            {selectedLocation &&
-                              getLocationActivities(selectedLocation.name).map(
-                                (activity, index) => (
+                          <motion.div
+                            variants={itemVariants}
+                            initial="hidden"
+                            animate="show"
+                            exit="exit"
+                            className="absolute inset-0"
+                          >
+                            <ScrollArea className="h-full pr-4 custom-scrollbar">
+                              {selectedLocation &&
+                                getAgentsAtLocation(selectedLocation.name).map((agent) => (
                                   <div
-                                    key={index}
-                                    className="mb-4 p-4 bg-green-100 rounded-2xl border-2 border-black shadow-[2px_2px_0_0_black]"
+                                    key={agent.id}
+                                    className="flex items-center space-x-4 mb-4 p-4 bg-yellow-100 rounded-2xl border-2 border-black shadow-[2px_2px_0_0_black]"
                                   >
-                                    <h4 className="text-sm font-semibold text-black mb-2 font-title">
-                                      {activity.name}
-                                    </h4>
-                                    <p className="text-xs text-black/70 font-body">
-                                      {activity.description}
-                                    </p>
+                                    <Avatar className="w-10 h-10 border-2 border-black">
+                                      <AvatarImage src={agent.avatar} alt={agent.name} />
+                                      <AvatarFallback className={agent.color}>
+                                        {agent.name.charAt(0)}
+                                      </AvatarFallback>
+                                    </Avatar>
+                                    <div>
+                                      <h4 className="text-sm font-semibold text-black font-title">
+                                        {agent.name}
+                                      </h4>
+                                      <p className="text-xs text-black/70 font-body">
+                                        From {agent.location}
+                                      </p>
+                                    </div>
+                                    <Button
+                                      variant="secondary"
+                                      size="sm"
+                                      className="ml-auto border-2 border-black shadow-[2px_2px_0_0_black] bg-white text-black hover:bg-white/90"
+                                      onClick={() => handleAgentClick(agent)}
+                                    >
+                                      Interact
+                                    </Button>
                                   </div>
-                                )
-                              )}
-                          </ScrollArea>
-                        </motion.div>
-                      </TabsContent>
-                    </Tabs>
-                    <DialogFooter className="mt-4 p-4 bg-pink-50 border-t-2 border-black">
-                      <Button
-                        onClick={() => setIsLocationDialogOpen(false)}
-                        className="bg-black text-white hover:bg-black/80"
-                      >
-                        Close
-                      </Button>
-                    </DialogFooter>
-                  </>
-                )}
+                                ))}
+                            </ScrollArea>
+                          </motion.div>
+                        </TabsContent>
+                        <TabsContent
+                          value="activities"
+                          className="mt-0 h-[250px] relative overflow-hidden"
+                        >
+                          <motion.div
+                            variants={itemVariants}
+                            initial="hidden"
+                            animate="show"
+                            exit="exit"
+                            className="absolute inset-0"
+                          >
+                            <ScrollArea className="h-full pr-4 custom-scrollbar">
+                              {selectedLocation &&
+                                getLocationActivities(selectedLocation.name).map(
+                                  (activity, index) => (
+                                    <div
+                                      key={index}
+                                      className="mb-4 p-4 bg-green-100 rounded-2xl border-2 border-black shadow-[2px_2px_0_0_black]"
+                                    >
+                                      <h4 className="text-sm font-semibold text-black mb-2 font-title">
+                                        {activity.name}
+                                      </h4>
+                                      <p className="text-xs text-black/70 font-body">
+                                        {activity.description}
+                                      </p>
+                                    </div>
+                                  )
+                                )}
+                            </ScrollArea>
+                          </motion.div>
+                        </TabsContent>
+                      </Tabs>
+                      <DialogFooter className="mt-4 p-4 bg-pink-50 border-t-2 border-black">
+                        <Button
+                          onClick={() => setIsLocationDialogOpen(false)}
+                          className="bg-black text-white hover:bg-black/80"
+                        >
+                          Close
+                        </Button>
+                      </DialogFooter>
+                    </>
+                  )}
+                </div>
               </motion.div>
             </DialogContent>
           </Dialog>
