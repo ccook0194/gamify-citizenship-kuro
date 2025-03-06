@@ -86,12 +86,13 @@ export default function ApplicationProcessModal() {
           setMessages([...newMessages, questions[currentQuestionIndex + 1]]);
           setCurrentQuestionIndex(currentQuestionIndex + 1);
         }
-      }, 1500);
+      }, 200);
     }
   };
 
   const handleKeyPress = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
     if (e.key === 'Enter' && inputValue.trim() !== '') {
+      e.preventDefault();
       handleNextQuestion();
     }
   };

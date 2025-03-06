@@ -20,6 +20,7 @@ import { RootState } from '@/redux/store';
 import { capitalizeFirstLetter } from '@/lib/utils';
 import { signOut, useSession } from 'next-auth/react';
 import { Button } from '@/components/ui/button';
+import axios from 'axios';
 
 interface Event {
   location: string;
@@ -61,7 +62,7 @@ const hoverPop = {
   whileTap: { scale: 0.97 },
 };
 
-export default function KuroWorld() {
+export default function KuroWorld({ citizenshipApplication }: any) {
   const { data: session, status } = useSession();
 
   const agents = useSelector((state: RootState) => state.agentActivity.agents as Agent[]);
@@ -148,7 +149,11 @@ export default function KuroWorld() {
             <div className="flex items-center gap-2">
               <div className="w-10 h-10 rounded-full border-2 border-black overflow-hidden">
                 <Image
-                  src={session?.user?.image || '/pfps/pfp1.png'}
+                  src={
+                    citizenshipApplication?.twitter_profile_picture ||
+                    session?.user?.image ||
+                    '/pfps/pfp1.png'
+                  }
                   alt="Cat Avatar"
                   width={40}
                   height={40}
@@ -156,7 +161,7 @@ export default function KuroWorld() {
                 />
               </div>
               <h1 className="text-2xl font-title font-extrabold text-black">
-                {session?.user?.name || 'Kuro Status'}
+                {citizenshipApplication?.name || session?.user?.name || 'Kuro Status'}
               </h1>
             </div>
             <GradientButton onClick={toggleCollapse} size="md">
@@ -179,7 +184,9 @@ export default function KuroWorld() {
                       <Verified className="w-5 h-5 text-blue-600" />
                       <h3 className="text-sm font-title font-bold text-black">Status</h3>
                     </div>
-                    <p className="text-sm text-black italic">Pending</p>
+                    <p className="text-sm text-black italic capitalize">
+                      {citizenshipApplication?.status || 'Checking status...'}
+                    </p>
                   </motion.div>
                   {/* Ticket Id */}
                   <motion.div
@@ -191,7 +198,9 @@ export default function KuroWorld() {
                       <Ticket className="w-5 h-5 text-blue-600" />
                       <h3 className="text-sm font-title font-bold text-black">Ticket Number</h3>
                     </div>
-                    <p className="text-sm text-black italic">100001</p>
+                    <p className="text-sm text-black italic">
+                      {citizenshipApplication?.ticket_number || 'Generating ticket number...'}
+                    </p>
                   </motion.div>
                   <div className="text-right mt-3">
                     <Button variant="outline" onClick={() => signOut()}>
@@ -222,9 +231,6 @@ export default function KuroWorld() {
                         variants={itemVariants}
                         {...hoverPop}
                       >
-                        {/* <h2 className="text-lg font-title font-bold text-black mb-1">
-                      {currentEvent.title}
-                    </h2> */}
                         <p className="text-sm text-black">
                           {capitalizeFirstLetter(currentEvent?.description || '')}
                         </p>

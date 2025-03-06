@@ -6,19 +6,19 @@ import { db } from '@/db';
 export async function GET(req: Request) {
   try {
     const { searchParams } = new URL(req.url);
-    const userId = searchParams.get('user_id');
+    const twitterId = searchParams.get('twitter_id');
 
-    if (!userId) {
-      return NextResponse.json({ error: 'User ID is required' }, { status: 400 });
+    if (!twitterId) {
+      return NextResponse.json({ error: 'Twitter Id is required' }, { status: 400 });
     }
 
     const result = await db
       .select()
       .from(citizenshipApplications)
-      .where(eq(citizenshipApplications.id, userId));
+      .where(eq(citizenshipApplications.twitter_id, twitterId));
 
     if (result.length === 0) {
-      return NextResponse.json({ error: 'Application not found' }, { status: 404 });
+      return NextResponse.json({ error: "User doesn't exist" }, { status: 404 });
     }
 
     return NextResponse.json(result[0], { status: 200 });

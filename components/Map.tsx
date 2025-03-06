@@ -47,13 +47,12 @@ import { fetchAgentActivity } from '@/redux/slices/activitySlice';
 import { increaseInteract } from '@/redux/slices/interactionSlice';
 import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
 import { motion, AnimatePresence } from 'framer-motion';
-import { capitalizeFirstLetter } from '@/lib/utils';
 import { useRouter } from 'next/navigation';
-import axios from 'axios';
 import ApplicationProcessModal from './modals/ApplicationProcessModal';
 import Image from 'next/image';
 import ImagesLinks from '@/utils/ImagesLinks';
 import { useSession } from 'next-auth/react';
+import axios from 'axios';
 
 // Custom scrollbar styling
 const customScrollbarStyles = `
@@ -429,6 +428,7 @@ const MapComponent = ({ weather }: MapProps) => {
   const [isNight, setIsNight] = useState(false);
   const [isPlaying, setIsPlaying] = useState(false);
   const [volume, setVolume] = useState([0.5]);
+  const [citizenshipApplication, setCitizenshipApplication] = useState(null);
   const audioRef = useRef<HTMLAudioElement>(null);
 
   useEffect(() => {
@@ -448,6 +448,55 @@ const MapComponent = ({ weather }: MapProps) => {
     window.addEventListener('resize', updateScale);
     return () => window.removeEventListener('resize', updateScale);
   }, []);
+
+  useEffect(() => {
+    if (status === 'authenticated' && session?.user?.id) {
+      handleCitizenshipApplication(session.user);
+    }
+  }, [status]);
+
+  async function handleCitizenshipApplication(user: any) {
+    try {
+      const isExisting = await checkCitizenshipApplication(user.id);
+      if (!isExisting) {
+        await applyCitizenship(user);
+      }
+    } catch (error) {
+      console.error('Error handling citizenship application:', error);
+    }
+  }
+
+  async function checkCitizenshipApplication(twitterId: string) {
+    if (!twitterId) {
+      console.error('Twitter ID is missing');
+      return false;
+    }
+
+    try {
+      const response = await axios.get(`/api/citizenship/status`, {
+        params: { twitter_id: twitterId },
+      });
+      setCitizenshipApplication(response?.data);
+      return !!response?.data; // Returns true if application exists
+    } catch (error) {
+      console.error('Error fetching citizenship status:', error);
+      return false;
+    }
+  }
+
+  async function applyCitizenship(user: any) {
+    if (!user) return;
+
+    try {
+      await axios.post(`/api/citizenship/apply`, {
+        twitter_id: user.id,
+        twitter_name: user.name,
+        twitter_profile_picture: user.image,
+      });
+    } catch (error) {
+      console.error('Error applying for citizenship:', error);
+    }
+  }
 
   const clampOffset = (newOffset: { x: number; y: number }) => {
     if (!containerRef.current) return newOffset;
@@ -608,20 +657,6 @@ const MapComponent = ({ weather }: MapProps) => {
   const getLocation = (location: string) => {
     return locations.find((item) => item.name == location);
   };
-
-  async function checkCitizenshipStatus(userId: string) {
-    if (userId) {
-      try {
-        const response = await axios.get(`/api/citizenship/status`, {
-          params: { user_id: userId },
-        });
-        window.alert(JSON.stringify(response?.data || {}));
-        console.log('Status Data:', response.data);
-      } catch (error) {
-        console.error('Error fetching status:', error);
-      }
-    }
-  }
 
   return (
     <div
@@ -851,7 +886,7 @@ const MapComponent = ({ weather }: MapProps) => {
       </div>
 
       <div className="absolute" style={{ top: '2%', left: '2%', zIndex: 1100 }}>
-        <KuroStatus />
+        <KuroStatus citizenshipApplication={citizenshipApplication} />
       </div>
 
       {/* Dialogs */}
