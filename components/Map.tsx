@@ -49,8 +49,9 @@ import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
 import { motion, AnimatePresence } from 'framer-motion';
 import { capitalizeFirstLetter } from '@/lib/utils';
 import { useRouter } from 'next/navigation';
-import { createClient } from '@supabase/supabase-js';
 import axios from 'axios';
+import { signIn } from 'next-auth/react';
+import { useSession } from 'next-auth/react';
 
 // Custom scrollbar styling
 const customScrollbarStyles = `
@@ -386,6 +387,7 @@ interface MapProps {
 const MapComponent = ({ weather }: MapProps) => {
   const router = useRouter();
   const dispatch = useAppDispatch();
+  const { data: session, status } = useSession();
 
   // Agents activities and Conversations from Redux
   const agents = useSelector((state: RootState) => state.agentActivity.agents as Agent[]);
@@ -605,22 +607,6 @@ const MapComponent = ({ weather }: MapProps) => {
     return locations.find((item) => item.name == location);
   };
 
-  async function signInWithTwitter() {
-    const supabase = createClient(
-      process.env.NEXT_PUBLIC_SUPABASE_URL!,
-      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
-    );
-
-    const { data, error } = await supabase.auth.signInWithOAuth({
-      provider: 'twitter',
-      options: {
-        redirectTo: `${process.env.NEXT_PUBLIC_SITE_URL}/game`,
-      },
-    });
-
-    console.log(data, error, '--');
-  }
-
   async function checkCitizenshipStatus(userId: string) {
     if (userId) {
       try {
@@ -634,6 +620,9 @@ const MapComponent = ({ weather }: MapProps) => {
       }
     }
   }
+
+  // if (status === 'loading') return <p>Loading...</p>;
+  // if (!session) return <p>Not logged in</p>;
 
   return (
     <div
@@ -916,7 +905,7 @@ const MapComponent = ({ weather }: MapProps) => {
                           animate="show"
                           exit="exit"
                           className="absolute inset-0"
-                          onClick={signInWithTwitter}
+                          onClick={() => signIn('twitter')}
                         >
                           <DialogDescription className="text-black font-body bg-pink-50 p-4 rounded-2xl border-2 border-black shadow-[2px_2px_0_0_black] mb-4">
                             Click here for Twitter OAuth
