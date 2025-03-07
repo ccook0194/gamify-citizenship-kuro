@@ -26,3 +26,36 @@ export async function GET(req: Request) {
     return NextResponse.json({ error: 'Database error', details: error.message }, { status: 500 });
   }
 }
+
+export async function POST(req: Request) {
+  try {
+    const { twitter_id, status } = await req.json();
+
+    if (!twitter_id || !status) {
+      return NextResponse.json({ error: 'Twitter ID and status are required' }, { status: 400 });
+    }
+
+    const existingUser = await db
+      .select()
+      .from(citizenshipApplications)
+      .where(eq(citizenshipApplications.twitter_id, twitter_id));
+
+    if (existingUser.length === 0) {
+      return NextResponse.json({ error: "User doesn't exist" }, { status: 404 });
+    }
+
+    await db
+      .update(citizenshipApplications)
+      .set({ status })
+      .where(eq(citizenshipApplications.twitter_id, twitter_id));
+
+    const updatedUser = await db
+      .select()
+      .from(citizenshipApplications)
+      .where(eq(citizenshipApplications.twitter_id, twitter_id));
+
+    return NextResponse.json(updatedUser[0], { status: 200 });
+  } catch (error: any) {
+    return NextResponse.json({ error: 'Database error', details: error.message }, { status: 500 });
+  }
+}
