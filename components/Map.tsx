@@ -53,6 +53,8 @@ import Image from 'next/image';
 import ImagesLinks from '@/utils/ImagesLinks';
 import { useSession } from 'next-auth/react';
 import axios from 'axios';
+import { Alert } from './ui/alert';
+import MotionAlert from './MotionAlert';
 
 // Custom scrollbar styling
 const customScrollbarStyles = `
@@ -429,6 +431,7 @@ const MapComponent = ({ weather }: MapProps) => {
   const [isPlaying, setIsPlaying] = useState(false);
   const [volume, setVolume] = useState([0.5]);
   const [citizenshipApplication, setCitizenshipApplication] = useState(null);
+  const [showApplicationSuccessAlert, setShowApplicationSuccessAlert] = useState(false);
   const audioRef = useRef<HTMLAudioElement>(null);
 
   useEffect(() => {
@@ -488,11 +491,15 @@ const MapComponent = ({ weather }: MapProps) => {
     if (!user) return;
 
     try {
-      await axios.post(`/api/citizenship/apply`, {
+      const response = await axios.post(`/api/citizenship/apply`, {
         twitter_id: user.id,
         twitter_name: user.name,
         twitter_profile_picture: user.image,
       });
+
+      if (response?.data) {
+        setShowApplicationSuccessAlert(true);
+      }
     } catch (error) {
       console.error('Error applying for citizenship:', error);
     }
@@ -659,433 +666,445 @@ const MapComponent = ({ weather }: MapProps) => {
   };
 
   return (
-    <div
-      ref={containerRef}
-      className="relative w-full h-full overflow-hidden bg-slate-700 select-none"
-      onMouseDownCapture={handleMouseDown}
-      onMouseMoveCapture={handleMouseMove}
-      onMouseUpCapture={handleMouseUp}
-      onMouseLeave={handleMouseUp}
-    >
-      {/* Fixed Base Clouds as background */}
+    <>
       <div
-        className="absolute inset-0 pointer-events-none"
-        style={{
-          backgroundImage: 'url(/mapLayers/clouds.png)',
-          backgroundSize: 'cover',
-          backgroundPosition: 'center',
-          backgroundAttachment: 'fixed',
-          opacity: 1,
-          zIndex: 10,
-        }}
-      />
-
-      {/* Draggable map content */}
-      <div
-        className="absolute"
-        style={{
-          transform: `translate(${offset.x}px, ${offset.y}px) scale(${scale})`,
-          transformOrigin: 'top left',
-          width: '1920px',
-          height: '1080px',
-          transition: isDragging ? 'none' : 'transform 0.1s ease-out',
-          zIndex: 1,
-        }}
+        ref={containerRef}
+        className="relative w-full h-full overflow-hidden bg-slate-700 select-none"
+        onMouseDownCapture={handleMouseDown}
+        onMouseMoveCapture={handleMouseMove}
+        onMouseUpCapture={handleMouseUp}
+        onMouseLeave={handleMouseUp}
       >
-        <MovingClouds />
+        <div
+          className="absolute inset-0 pointer-events-none"
+          style={{
+            backgroundImage: 'url(/mapLayers/clouds.png)',
+            backgroundSize: 'cover',
+            backgroundPosition: 'center',
+            backgroundAttachment: 'fixed',
+            opacity: 1,
+            zIndex: 10,
+          }}
+        />
 
-        {/* Render panned map layers */}
-        {pannedLayers.map((layer, index) => {
-          const extraStyles =
-            structureMapping[layer.name] === hoveredLocation
-              ? { transform: 'scale(1.05)', filter: 'drop-shadow(0 0 8px rgba(255,255,255,0.3))' }
-              : {};
-          return (
-            <img
-              key={layer.name}
-              src={`/mapLayers/${layer.name}.png`}
-              alt={layer.name}
-              draggable={false}
-              onDragStart={(e) => e.preventDefault()}
-              className="transition-all duration-200"
-              style={{
-                position: 'absolute',
-                left: `${layer.left}px`,
-                top: `${layer.top}px`,
-                width: `${layer.width}px`,
-                height: `${layer.height}px`,
-                zIndex: index + 2,
-                pointerEvents: 'none',
-                ...extraStyles,
-              }}
-            />
-          );
-        })}
+        {/* Draggable map content */}
+        <div
+          className="absolute"
+          style={{
+            transform: `translate(${offset.x}px, ${offset.y}px) scale(${scale})`,
+            transformOrigin: 'top left',
+            width: '1920px',
+            height: '1080px',
+            transition: isDragging ? 'none' : 'transform 0.1s ease-out',
+            zIndex: 1,
+          }}
+        >
+          <MovingClouds />
 
-        {/* Map Location Buttons */}
-        {locations.map((location) => (
-          <Popover key={`location-${location.id}`}>
-            <PopoverTrigger asChild>
-              <Button
-                onMouseEnter={() => setHoveredLocation(location.name)}
-                onMouseLeave={() => setHoveredLocation(null)}
-                variant="location"
-                size="icon"
-                className={`absolute transform -translate-x-1/2 -translate-y-1/2 ${location.color} border border-black shadow-[2px_2px_0_0_black] outline outline-1 outline-black`}
-                style={{ left: `${location.x}%`, top: `${location.y}%`, zIndex: 101 }}
-                aria-label={`Visit ${location.name}`}
-                onClick={() => handleLocationClick(location)}
-              >
-                {location.icon}
-              </Button>
-            </PopoverTrigger>
-            <PopoverContent asChild>
-              <motion.div
-                variants={popoverVariants}
-                initial="hidden"
-                animate="show"
-                className="w-64 p-0 bg-white border-2 border-black shadow-[4px_4px_0_0_black] rounded-2xl overflow-hidden bg-[url('/cloudspop.png')] bg-repeat bg-left-top bg-fixed"
-              >
-                <div className="p-4 bg-pink-100 border-b-2 border-black">
-                  <h3 className="text-lg font-bold text-black mb-2 font-title flex items-center gap-2">
-                    {location.icon}
-                    {location.name}
-                  </h3>
-                  <p className="text-sm text-black font-body">
-                    {getLocationDescription(location.name)}
-                  </p>
-                  <Button
-                    className="w-full mt-3 bg-black text-white hover:bg-black/80"
-                    onClick={() => handleLocationClick(location)}
-                  >
-                    Visit Location
-                  </Button>
-                </div>
-                <div className="p-4 bg-yellow-100">
-                  <h4 className="text-sm font-semibold text-black mb-3 flex items-center font-title">
-                    <Users className="w-4 h-4 mr-2" />
-                    Characters Here
-                  </h4>
-                  <div className="space-y-2">
-                    {getAgentsAtLocation(location.name).map((agent) => (
-                      <Button
-                        key={'locationAgent' + agent.id}
-                        variant="secondary"
-                        size="sm"
-                        className="w-full justify-start text-left border-2 border-black shadow-[2px_2px_0_0_black] bg-white text-black hover:bg-white/90"
-                        onClick={() => handleAgentClick(agent)}
-                      >
-                        {agent.name}
-                      </Button>
-                    ))}
-                  </div>
-                </div>
-              </motion.div>
-            </PopoverContent>
-          </Popover>
-        ))}
-
-        {/* Main Avatars */}
-        {aiAgents.map(
-          (agent) =>
-            agent.isMainAgent && (
-              <div
-                key={'AI Agents' + agent.id}
-                className="absolute transform -translate-x-1/2 -translate-y-1/2 transition-all duration-1000 ease-in-out"
+          {/* Render panned map layers */}
+          {pannedLayers.map((layer, index) => {
+            const extraStyles =
+              structureMapping[layer.name] === hoveredLocation
+                ? { transform: 'scale(1.05)', filter: 'drop-shadow(0 0 8px rgba(255,255,255,0.3))' }
+                : {};
+            return (
+              <img
+                key={layer.name}
+                src={`/mapLayers/${layer.name}.png`}
+                alt={layer.name}
+                draggable={false}
+                onDragStart={(e) => e.preventDefault()}
+                className="transition-all duration-200"
                 style={{
-                  left: `${
-                    getLocation(positions[agent.id - 1])!.x +
-                    2 * Math.pow(-1, agent.id + Math.floor(agent.id / 2))
-                  }%`,
-                  top: `${getLocation(positions[agent.id - 1])!.y + 2 * Math.pow(-1, agent.id)}%`,
-                  zIndex: 102,
+                  position: 'absolute',
+                  left: `${layer.left}px`,
+                  top: `${layer.top}px`,
+                  width: `${layer.width}px`,
+                  height: `${layer.height}px`,
+                  zIndex: index + 2,
+                  pointerEvents: 'none',
+                  ...extraStyles,
                 }}
-              >
-                <TooltipProvider>
-                  <Tooltip>
-                    <TooltipTrigger asChild>
-                      <Button
-                        onMouseEnter={() => setHoveredLocation('Kuro')}
-                        onMouseLeave={() => setHoveredLocation(null)}
-                        variant="ghost"
-                        className="w-12 h-12 rounded-full bg-black border-2 border-yellow-400 shadow-md transition-all duration-200 hover:scale-105 focus:outline-none focus:ring-2 focus:ring-yellow-300 focus:ring-opacity-50 p-0"
-                        onClick={(e) => handleCharacterClick(agent.name)}
-                        aria-label="Kuro's current location"
-                      >
-                        <Avatar className="w-10 h-10">
-                          <AvatarImage src={agent.avatar} alt={agent.name} />
-                          <AvatarFallback className={agent.color}>
-                            {agent.name.charAt(0)}
-                          </AvatarFallback>
-                        </Avatar>
-                      </Button>
-                    </TooltipTrigger>
-                    <TooltipContent>
-                      <p>{positions[agent.id - 1]}</p>
-                    </TooltipContent>
-                  </Tooltip>
-                </TooltipProvider>
-              </div>
-            )
-        )}
-      </div>
-
-      {/* Fixed UI Overlays (2% padding from edges) */}
-      <div className="absolute" style={{ top: '2%', right: '2%', zIndex: 1100 }}>
-        <div className="bg-pink-100 p-3 rounded-2xl border-2 border-black shadow-[2px_2px_0_0_black] flex items-center space-x-4">
-          <audio ref={audioRef} src="/audio/track.mp3" loop />
-          <div className="flex items-center space-x-2">
-            {getWeatherIcon(weather)}
-            <span className="text-sm font-bold text-black">{weather}</span>
-          </div>
-          <div className="h-8 w-[1px] bg-black/20"></div>
-          <div className="flex items-center space-x-2">
-            {isNight ? (
-              <Moon className="w-6 h-6 text-purple-600" />
-            ) : (
-              <Sunrise className="w-6 h-6 text-orange-600" />
-            )}
-            <span className="text-sm font-bold text-black">
-              {currentTime.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-            </span>
-          </div>
-          <div className="h-8 w-[1px] bg-black/20"></div>
-          <div className="flex items-center space-x-3">
-            <button
-              onClick={() => {
-                if (audioRef.current) {
-                  if (isPlaying) {
-                    audioRef.current.pause();
-                  } else {
-                    audioRef.current.play();
-                  }
-                  setIsPlaying(!isPlaying);
-                }
-              }}
-              className="w-8 h-8 rounded-full bg-violet-500 hover:bg-violet-600 flex items-center justify-center transition-colors border border-black"
-            >
-              {isPlaying ? (
-                <Pause className="w-4 h-4 text-white" />
-              ) : (
-                <Play className="w-4 h-4 text-white translate-x-[1px]" />
-              )}
-            </button>
-            <div className="flex items-center space-x-2 min-w-[100px]">
-              <Volume2 className="w-4 h-4 text-violet-600" />
-              <Slider
-                defaultValue={[0.5]}
-                max={1}
-                step={0.1}
-                value={volume}
-                onValueChange={setVolume}
-                className="w-20"
               />
+            );
+          })}
+
+          {/* Map Location Buttons */}
+          {locations.map((location) => (
+            <Popover key={`location-${location.id}`}>
+              <PopoverTrigger asChild>
+                <Button
+                  onMouseEnter={() => setHoveredLocation(location.name)}
+                  onMouseLeave={() => setHoveredLocation(null)}
+                  variant="location"
+                  size="icon"
+                  className={`absolute transform -translate-x-1/2 -translate-y-1/2 ${location.color} border border-black shadow-[2px_2px_0_0_black] outline outline-1 outline-black`}
+                  style={{ left: `${location.x}%`, top: `${location.y}%`, zIndex: 101 }}
+                  aria-label={`Visit ${location.name}`}
+                  onClick={() => handleLocationClick(location)}
+                >
+                  {location.icon}
+                </Button>
+              </PopoverTrigger>
+              <PopoverContent asChild>
+                <motion.div
+                  variants={popoverVariants}
+                  initial="hidden"
+                  animate="show"
+                  className="w-64 p-0 bg-white border-2 border-black shadow-[4px_4px_0_0_black] rounded-2xl overflow-hidden bg-[url('/cloudspop.png')] bg-repeat bg-left-top bg-fixed"
+                >
+                  <div className="p-4 bg-pink-100 border-b-2 border-black">
+                    <h3 className="text-lg font-bold text-black mb-2 font-title flex items-center gap-2">
+                      {location.icon}
+                      {location.name}
+                    </h3>
+                    <p className="text-sm text-black font-body">
+                      {getLocationDescription(location.name)}
+                    </p>
+                    <Button
+                      className="w-full mt-3 bg-black text-white hover:bg-black/80"
+                      onClick={() => handleLocationClick(location)}
+                    >
+                      Visit Location
+                    </Button>
+                  </div>
+                  <div className="p-4 bg-yellow-100">
+                    <h4 className="text-sm font-semibold text-black mb-3 flex items-center font-title">
+                      <Users className="w-4 h-4 mr-2" />
+                      Characters Here
+                    </h4>
+                    <div className="space-y-2">
+                      {getAgentsAtLocation(location.name).map((agent) => (
+                        <Button
+                          key={'locationAgent' + agent.id}
+                          variant="secondary"
+                          size="sm"
+                          className="w-full justify-start text-left border-2 border-black shadow-[2px_2px_0_0_black] bg-white text-black hover:bg-white/90"
+                          onClick={() => handleAgentClick(agent)}
+                        >
+                          {agent.name}
+                        </Button>
+                      ))}
+                    </div>
+                  </div>
+                </motion.div>
+              </PopoverContent>
+            </Popover>
+          ))}
+
+          {/* Main Avatars */}
+          {aiAgents.map(
+            (agent) =>
+              agent.isMainAgent && (
+                <div
+                  key={'AI Agents' + agent.id}
+                  className="absolute transform -translate-x-1/2 -translate-y-1/2 transition-all duration-1000 ease-in-out"
+                  style={{
+                    left: `${
+                      getLocation(positions[agent.id - 1])!.x +
+                      2 * Math.pow(-1, agent.id + Math.floor(agent.id / 2))
+                    }%`,
+                    top: `${getLocation(positions[agent.id - 1])!.y + 2 * Math.pow(-1, agent.id)}%`,
+                    zIndex: 102,
+                  }}
+                >
+                  <TooltipProvider>
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <Button
+                          onMouseEnter={() => setHoveredLocation('Kuro')}
+                          onMouseLeave={() => setHoveredLocation(null)}
+                          variant="ghost"
+                          className="w-12 h-12 rounded-full bg-black border-2 border-yellow-400 shadow-md transition-all duration-200 hover:scale-105 focus:outline-none focus:ring-2 focus:ring-yellow-300 focus:ring-opacity-50 p-0"
+                          onClick={(e) => handleCharacterClick(agent.name)}
+                          aria-label="Kuro's current location"
+                        >
+                          <Avatar className="w-10 h-10">
+                            <AvatarImage src={agent.avatar} alt={agent.name} />
+                            <AvatarFallback className={agent.color}>
+                              {agent.name.charAt(0)}
+                            </AvatarFallback>
+                          </Avatar>
+                        </Button>
+                      </TooltipTrigger>
+                      <TooltipContent>
+                        <p>{positions[agent.id - 1]}</p>
+                      </TooltipContent>
+                    </Tooltip>
+                  </TooltipProvider>
+                </div>
+              )
+          )}
+        </div>
+
+        {/* Fixed UI Overlays (2% padding from edges) */}
+        <div className="absolute" style={{ top: '2%', right: '2%', zIndex: 1100 }}>
+          <div className="bg-pink-100 p-3 rounded-2xl border-2 border-black shadow-[2px_2px_0_0_black] flex items-center space-x-4">
+            <audio ref={audioRef} src="/audio/track.mp3" loop />
+            <div className="flex items-center space-x-2">
+              {getWeatherIcon(weather)}
+              <span className="text-sm font-bold text-black">{weather}</span>
+            </div>
+            <div className="h-8 w-[1px] bg-black/20"></div>
+            <div className="flex items-center space-x-2">
+              {isNight ? (
+                <Moon className="w-6 h-6 text-purple-600" />
+              ) : (
+                <Sunrise className="w-6 h-6 text-orange-600" />
+              )}
+              <span className="text-sm font-bold text-black">
+                {currentTime.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+              </span>
+            </div>
+            <div className="h-8 w-[1px] bg-black/20"></div>
+            <div className="flex items-center space-x-3">
+              <button
+                onClick={() => {
+                  if (audioRef.current) {
+                    if (isPlaying) {
+                      audioRef.current.pause();
+                    } else {
+                      audioRef.current.play();
+                    }
+                    setIsPlaying(!isPlaying);
+                  }
+                }}
+                className="w-8 h-8 rounded-full bg-violet-500 hover:bg-violet-600 flex items-center justify-center transition-colors border border-black"
+              >
+                {isPlaying ? (
+                  <Pause className="w-4 h-4 text-white" />
+                ) : (
+                  <Play className="w-4 h-4 text-white translate-x-[1px]" />
+                )}
+              </button>
+              <div className="flex items-center space-x-2 min-w-[100px]">
+                <Volume2 className="w-4 h-4 text-violet-600" />
+                <Slider
+                  defaultValue={[0.5]}
+                  max={1}
+                  step={0.1}
+                  value={volume}
+                  onValueChange={setVolume}
+                  className="w-20"
+                />
+              </div>
             </div>
           </div>
         </div>
-      </div>
 
-      <div className="absolute" style={{ top: '2%', left: '2%', zIndex: 1100 }}>
-        <KuroStatus citizenshipApplication={citizenshipApplication} />
-      </div>
+        <div className="absolute" style={{ top: '2%', left: '2%', zIndex: 1100 }}>
+          <KuroStatus citizenshipApplication={citizenshipApplication} />
+        </div>
 
-      {/* Dialogs */}
-      <style jsx global>
-        {customScrollbarStyles}
-      </style>
+        {/* Dialogs */}
+        <style jsx global>
+          {customScrollbarStyles}
+        </style>
 
-      <AnimatePresence>
-        {isLocationDialogOpen && (
-          <Dialog open={isLocationDialogOpen} onOpenChange={setIsLocationDialogOpen}>
-            <DialogContent className="p-0 bg-transparent border-none shadow-none">
-              <motion.div
-                variants={containerVariants}
-                initial="hidden"
-                animate="show"
-                exit="exit"
-                className="sm:max-w-[600px] bg-white border-2 border-black shadow-[4px_4px_0_0_black] rounded-2xl overflow-hidden bg-[url('/cloudspop.png')] bg-repeat bg-left-top bg-fixed"
-              >
-                <DialogHeader className="p-4 bg-pink-100 border-b-2 border-black">
-                  <DialogTitle className="text-2xl font-bold text-black flex items-center gap-2 font-title">
-                    {selectedLocation?.icon}
-                    {selectedLocation?.name}
-                  </DialogTitle>
-                </DialogHeader>
+        <AnimatePresence>
+          {isLocationDialogOpen && (
+            <Dialog open={isLocationDialogOpen} onOpenChange={setIsLocationDialogOpen}>
+              <DialogContent className="p-0 bg-transparent border-none shadow-none">
+                <motion.div
+                  variants={containerVariants}
+                  initial="hidden"
+                  animate="show"
+                  exit="exit"
+                  className="sm:max-w-[600px] bg-white border-2 border-black shadow-[4px_4px_0_0_black] rounded-2xl overflow-hidden bg-[url('/cloudspop.png')] bg-repeat bg-left-top bg-fixed"
+                >
+                  <DialogHeader className="p-4 bg-pink-100 border-b-2 border-black">
+                    <DialogTitle className="text-2xl font-bold text-black flex items-center gap-2 font-title">
+                      {selectedLocation?.icon}
+                      {selectedLocation?.name}
+                    </DialogTitle>
+                  </DialogHeader>
 
-                <div className="max-h-[75vh] overflow-y-auto scroll-smooth">
-                  {selectedLocation?.name === 'Town Hall' && status !== 'authenticated' ? (
-                    <ApplicationProcessModal />
-                  ) : (
-                    <>
-                      <Tabs defaultValue="info" className="w-full p-4">
-                        <TabsList className="grid w-full grid-cols-3 p-1 bg-black rounded-xl mb-4">
-                          <TabsTrigger
+                  <div className="max-h-[75vh] overflow-y-auto scroll-smooth">
+                    {selectedLocation?.name === 'Town Hall' && status !== 'authenticated' ? (
+                      <ApplicationProcessModal />
+                    ) : (
+                      <>
+                        <Tabs defaultValue="info" className="w-full p-4">
+                          <TabsList className="grid w-full grid-cols-3 p-1 bg-black rounded-xl mb-4">
+                            <TabsTrigger
+                              value="info"
+                              className="data-[state=active]:bg-pink-100 data-[state=active]:text-black text-white"
+                            >
+                              Information
+                            </TabsTrigger>
+                            <TabsTrigger
+                              value="characters"
+                              className="data-[state=active]:bg-yellow-100 data-[state=active]:text-black text-white"
+                            >
+                              Characters
+                            </TabsTrigger>
+                            <TabsTrigger
+                              value="activities"
+                              className="data-[state=active]:bg-green-100 data-[state=active]:text-black text-white"
+                            >
+                              Activities
+                            </TabsTrigger>
+                          </TabsList>
+                          <TabsContent
                             value="info"
-                            className="data-[state=active]:bg-pink-100 data-[state=active]:text-black text-white"
+                            className="mt-0 h-[250px] relative overflow-hidden"
                           >
-                            Information
-                          </TabsTrigger>
-                          <TabsTrigger
+                            <motion.div
+                              variants={itemVariants}
+                              initial="hidden"
+                              animate="show"
+                              exit="exit"
+                              className="absolute inset-0"
+                            >
+                              <DialogDescription className="text-black font-body bg-pink-50 p-4 rounded-2xl border-2 border-black shadow-[2px_2px_0_0_black] mb-4">
+                                {selectedLocation && getLocationDescription(selectedLocation.name)}
+                              </DialogDescription>
+                              <div className="grid grid-cols-2 gap-4">
+                                <div className="bg-yellow-100 p-4 rounded-2xl border-2 border-black shadow-[2px_2px_0_0_black]">
+                                  <h4 className="text-sm font-semibold text-black mb-2 flex items-center font-title">
+                                    <Clock className="w-4 h-4 mr-2" />
+                                    Opening Hours
+                                  </h4>
+                                  <p className="text-sm text-black font-body">
+                                    {selectedLocation && getLocationHours(selectedLocation.name)}
+                                  </p>
+                                </div>
+                                <div className="bg-green-100 p-4 rounded-2xl border-2 border-black shadow-[2px_2px_0_0_black]">
+                                  <h4 className="text-sm font-semibold text-black mb-2 flex items-center font-title">
+                                    <Mail className="w-4 h-4 mr-2" />
+                                    Location Details
+                                  </h4>
+                                  <p className="text-sm text-black font-body">
+                                    {selectedLocation && getLocationDetails(selectedLocation.name)}
+                                  </p>
+                                </div>
+                              </div>
+                            </motion.div>
+                          </TabsContent>
+                          <TabsContent
                             value="characters"
-                            className="data-[state=active]:bg-yellow-100 data-[state=active]:text-black text-white"
+                            className="mt-0 h-[250px] relative overflow-hidden"
                           >
-                            Characters
-                          </TabsTrigger>
-                          <TabsTrigger
-                            value="activities"
-                            className="data-[state=active]:bg-green-100 data-[state=active]:text-black text-white"
-                          >
-                            Activities
-                          </TabsTrigger>
-                        </TabsList>
-                        <TabsContent
-                          value="info"
-                          className="mt-0 h-[250px] relative overflow-hidden"
-                        >
-                          <motion.div
-                            variants={itemVariants}
-                            initial="hidden"
-                            animate="show"
-                            exit="exit"
-                            className="absolute inset-0"
-                          >
-                            <DialogDescription className="text-black font-body bg-pink-50 p-4 rounded-2xl border-2 border-black shadow-[2px_2px_0_0_black] mb-4">
-                              {selectedLocation && getLocationDescription(selectedLocation.name)}
-                            </DialogDescription>
-                            <div className="grid grid-cols-2 gap-4">
-                              <div className="bg-yellow-100 p-4 rounded-2xl border-2 border-black shadow-[2px_2px_0_0_black]">
-                                <h4 className="text-sm font-semibold text-black mb-2 flex items-center font-title">
-                                  <Clock className="w-4 h-4 mr-2" />
-                                  Opening Hours
-                                </h4>
-                                <p className="text-sm text-black font-body">
-                                  {selectedLocation && getLocationHours(selectedLocation.name)}
-                                </p>
-                              </div>
-                              <div className="bg-green-100 p-4 rounded-2xl border-2 border-black shadow-[2px_2px_0_0_black]">
-                                <h4 className="text-sm font-semibold text-black mb-2 flex items-center font-title">
-                                  <Mail className="w-4 h-4 mr-2" />
-                                  Location Details
-                                </h4>
-                                <p className="text-sm text-black font-body">
-                                  {selectedLocation && getLocationDetails(selectedLocation.name)}
-                                </p>
-                              </div>
-                            </div>
-                          </motion.div>
-                        </TabsContent>
-                        <TabsContent
-                          value="characters"
-                          className="mt-0 h-[250px] relative overflow-hidden"
-                        >
-                          <motion.div
-                            variants={itemVariants}
-                            initial="hidden"
-                            animate="show"
-                            exit="exit"
-                            className="absolute inset-0"
-                          >
-                            <ScrollArea className="h-full pr-4 custom-scrollbar">
-                              {selectedLocation &&
-                                getAgentsAtLocation(selectedLocation.name).map((agent) => (
-                                  <div
-                                    key={agent.id}
-                                    className="flex items-center space-x-4 mb-4 p-4 bg-yellow-100 rounded-2xl border-2 border-black shadow-[2px_2px_0_0_black]"
-                                  >
-                                    <Avatar className="w-10 h-10 border-2 border-black">
-                                      <AvatarImage src={agent.avatar} alt={agent.name} />
-                                      <AvatarFallback className={agent.color}>
-                                        {agent.name.charAt(0)}
-                                      </AvatarFallback>
-                                    </Avatar>
-                                    <div>
-                                      <h4 className="text-sm font-semibold text-black font-title">
-                                        {agent.name}
-                                      </h4>
-                                      <p className="text-xs text-black/70 font-body">
-                                        From {agent.location}
-                                      </p>
-                                    </div>
-                                    <Button
-                                      variant="secondary"
-                                      size="sm"
-                                      className="ml-auto border-2 border-black shadow-[2px_2px_0_0_black] bg-white text-black hover:bg-white/90"
-                                      onClick={() => handleAgentClick(agent)}
-                                    >
-                                      Interact
-                                    </Button>
-                                  </div>
-                                ))}
-                            </ScrollArea>
-                          </motion.div>
-                        </TabsContent>
-                        <TabsContent
-                          value="activities"
-                          className="mt-0 h-[250px] relative overflow-hidden"
-                        >
-                          <motion.div
-                            variants={itemVariants}
-                            initial="hidden"
-                            animate="show"
-                            exit="exit"
-                            className="absolute inset-0"
-                          >
-                            <ScrollArea className="h-full pr-4 custom-scrollbar">
-                              {selectedLocation &&
-                                getLocationActivities(selectedLocation.name).map(
-                                  (activity, index) => (
+                            <motion.div
+                              variants={itemVariants}
+                              initial="hidden"
+                              animate="show"
+                              exit="exit"
+                              className="absolute inset-0"
+                            >
+                              <ScrollArea className="h-full pr-4 custom-scrollbar">
+                                {selectedLocation &&
+                                  getAgentsAtLocation(selectedLocation.name).map((agent) => (
                                     <div
-                                      key={index}
-                                      className="mb-4 p-4 bg-green-100 rounded-2xl border-2 border-black shadow-[2px_2px_0_0_black]"
+                                      key={agent.id}
+                                      className="flex items-center space-x-4 mb-4 p-4 bg-yellow-100 rounded-2xl border-2 border-black shadow-[2px_2px_0_0_black]"
                                     >
-                                      <h4 className="text-sm font-semibold text-black mb-2 font-title">
-                                        {activity.name}
-                                      </h4>
-                                      <p className="text-xs text-black/70 font-body">
-                                        {activity.description}
-                                      </p>
+                                      <Avatar className="w-10 h-10 border-2 border-black">
+                                        <AvatarImage src={agent.avatar} alt={agent.name} />
+                                        <AvatarFallback className={agent.color}>
+                                          {agent.name.charAt(0)}
+                                        </AvatarFallback>
+                                      </Avatar>
+                                      <div>
+                                        <h4 className="text-sm font-semibold text-black font-title">
+                                          {agent.name}
+                                        </h4>
+                                        <p className="text-xs text-black/70 font-body">
+                                          From {agent.location}
+                                        </p>
+                                      </div>
+                                      <Button
+                                        variant="secondary"
+                                        size="sm"
+                                        className="ml-auto border-2 border-black shadow-[2px_2px_0_0_black] bg-white text-black hover:bg-white/90"
+                                        onClick={() => handleAgentClick(agent)}
+                                      >
+                                        Interact
+                                      </Button>
                                     </div>
-                                  )
-                                )}
-                            </ScrollArea>
-                          </motion.div>
-                        </TabsContent>
-                      </Tabs>
-                      <DialogFooter className="mt-4 p-4 bg-pink-50 border-t-2 border-black">
-                        <Button
-                          onClick={() => setIsLocationDialogOpen(false)}
-                          className="bg-black text-white hover:bg-black/80"
-                        >
-                          Close
-                        </Button>
-                      </DialogFooter>
-                    </>
-                  )}
-                </div>
-              </motion.div>
-            </DialogContent>
-          </Dialog>
-        )}
-      </AnimatePresence>
+                                  ))}
+                              </ScrollArea>
+                            </motion.div>
+                          </TabsContent>
+                          <TabsContent
+                            value="activities"
+                            className="mt-0 h-[250px] relative overflow-hidden"
+                          >
+                            <motion.div
+                              variants={itemVariants}
+                              initial="hidden"
+                              animate="show"
+                              exit="exit"
+                              className="absolute inset-0"
+                            >
+                              <ScrollArea className="h-full pr-4 custom-scrollbar">
+                                {selectedLocation &&
+                                  getLocationActivities(selectedLocation.name).map(
+                                    (activity, index) => (
+                                      <div
+                                        key={index}
+                                        className="mb-4 p-4 bg-green-100 rounded-2xl border-2 border-black shadow-[2px_2px_0_0_black]"
+                                      >
+                                        <h4 className="text-sm font-semibold text-black mb-2 font-title">
+                                          {activity.name}
+                                        </h4>
+                                        <p className="text-xs text-black/70 font-body">
+                                          {activity.description}
+                                        </p>
+                                      </div>
+                                    )
+                                  )}
+                              </ScrollArea>
+                            </motion.div>
+                          </TabsContent>
+                        </Tabs>
+                        <DialogFooter className="mt-4 p-4 bg-pink-50 border-t-2 border-black">
+                          <Button
+                            onClick={() => setIsLocationDialogOpen(false)}
+                            className="bg-black text-white hover:bg-black/80"
+                          >
+                            Close
+                          </Button>
+                        </DialogFooter>
+                      </>
+                    )}
+                  </div>
+                </motion.div>
+              </DialogContent>
+            </Dialog>
+          )}
+        </AnimatePresence>
 
-      {/* Kuro Stats Dialog */}
-      <CharacterStatsDialog
-        open={isCharacterStatsDialogOpen}
-        onOpenChange={setIsCharacterStatsDialogOpen}
-        name={selectedCharacterName}
-      />
+        {/* Kuro Stats Dialog */}
+        <CharacterStatsDialog
+          open={isCharacterStatsDialogOpen}
+          onOpenChange={setIsCharacterStatsDialogOpen}
+          name={selectedCharacterName}
+        />
 
-      {/* AI Agent Dialog */}
-      <AIAgentDialog
-        open={isAgentDialogOpen}
-        onOpenChange={setIsAgentDialogOpen}
-        agent={selectedAgent}
-        date={currentTime}
-      />
+        {/* AI Agent Dialog */}
+        <AIAgentDialog
+          open={isAgentDialogOpen}
+          onOpenChange={setIsAgentDialogOpen}
+          agent={selectedAgent}
+          date={currentTime}
+        />
 
-      {/* Expandable Chat */}
-      <ExpandableChat currentTime={currentTime} />
-    </div>
+        {/* Expandable Chat */}
+        <ExpandableChat currentTime={currentTime} />
+      </div>
+      <div className="z-50">
+        <Alert title="Hi I am Depak" />
+      </div>
+
+      {showApplicationSuccessAlert && (
+        <MotionAlert
+          title="Congratulations"
+          message="You have successfully applied for citizenship in Kuro's World"
+          onClose={() => setShowApplicationSuccessAlert(false)}
+        />
+      )}
+    </>
   );
 };
 
