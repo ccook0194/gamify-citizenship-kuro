@@ -3,7 +3,6 @@ import { ReduxProvider } from '@/redux/provider';
 import NoiseOverlay from '@/components/NoiseOverlay';
 import { AuthProvider } from '../context/AuthContext';
 import './globals.css';
-import { SessionProvider } from 'next-auth/react';
 
 export const metadata: Metadata = {
   title: "Kuro's Adventure",
