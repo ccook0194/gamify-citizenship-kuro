@@ -29,7 +29,7 @@ export async function GET(req: Request) {
 
 export async function POST(req: Request) {
   try {
-    const { twitter_id, status } = await req.json();
+    const { twitter_id, status, status_remark } = await req.json();
 
     if (!twitter_id || !status) {
       return NextResponse.json({ error: 'Twitter ID and status are required' }, { status: 400 });
@@ -46,7 +46,7 @@ export async function POST(req: Request) {
 
     await db
       .update(citizenshipApplications)
-      .set({ status })
+      .set({ status, status_remark })
       .where(eq(citizenshipApplications.twitter_id, twitter_id));
 
     const updatedUser = await db

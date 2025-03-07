@@ -21,13 +21,6 @@ const itemVariants = {
   exit: { opacity: 0, y: 20, transition: { duration: 0.3 } },
 };
 
-// Primary chat objects
-const initialQuestion = {
-  id: 'initial',
-  type: 'question',
-  text: "Welcome to Kuro Town! I'm Mayor. Before we get started, I'd love to learn more about you!, Are you already registered with us?",
-};
-
 const finalQuestion = {
   id: 'final',
   type: 'question',
@@ -43,10 +36,13 @@ const finalQuestion = {
   ),
 };
 
-export default function ApplicationProcessModal() {
-  const [messages, setMessages] = useState<
-    { id: string; type: string; text: string | ReactNode }[]
-  >([initialQuestion]);
+export default function ApplicationProcessModal({
+  messages,
+  setMessages,
+}: {
+  messages: any;
+  setMessages: any;
+}) {
   const [isRegistered, setIsRegistered] = useState<boolean | null>(null);
   const [inputValue, setInputValue] = useState<string>('');
   const [chatCount, setChatCount] = useState<number>(0);
@@ -78,13 +74,13 @@ export default function ApplicationProcessModal() {
 
       if (newCount < maxChatQuestions) {
         // Continue asking further questions
-        setMessages((prev) => [
+        setMessages((prev: any) => [
           ...prev,
           { id: `q-${newCount}`, type: 'question', text: nextQuestionText },
         ]);
       } else {
         // Append the final question
-        setMessages((prev) => [...prev, finalQuestion]);
+        setMessages((prev: any) => [...prev, finalQuestion]);
       }
     } catch (error) {
       setIsLoading(false);
@@ -98,7 +94,7 @@ export default function ApplicationProcessModal() {
   const handleRadioSelection = (value: string) => {
     setIsRegistered(value === 'yes');
     // Append the user's radio answer to the chat
-    setMessages((prev) => [...prev, { id: 'r-initial', type: 'answer', text: value }]);
+    setMessages((prev: any) => [...prev, { id: 'r-initial', type: 'answer', text: value }]);
     // If "No" is selected, kick off the follow-up chat questions
     if (value === 'no') {
       handleChat('no, I am not registered');
@@ -107,8 +103,8 @@ export default function ApplicationProcessModal() {
 
   // Handler for when the user types an answer and proceeds
   const handleNextQuestion = () => {
-    if (inputValue.trim() !== '') {
-      setMessages((prev) => [
+    if (inputValue.trim() !== '' && !isLoading) {
+      setMessages((prev: any) => [
         ...prev,
         { id: `a-${prev.length + 1}`, type: 'answer', text: inputValue },
       ]);
@@ -128,7 +124,7 @@ export default function ApplicationProcessModal() {
   return (
     <div className="p-4 flex flex-col">
       {/* render questions and answers */}
-      {messages.map((msg) => (
+      {messages.map((msg: any) => (
         <MayorChatItem key={msg.id} chat={msg} />
       ))}
 

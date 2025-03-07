@@ -45,8 +45,6 @@ export async function POST(req: Request) {
       .from(citizenshipApplications)
       .where(eq(citizenshipApplications.twitter_id, twitter_id));
 
-    console.log(existingApplication, 'existingApplication');
-
     if (existingApplication.length) {
       return NextResponse.json(
         { error: 'Application already exists for this twitter_id' },
@@ -73,7 +71,7 @@ export async function POST(req: Request) {
       .returning({ id: citizenshipApplications.id });
 
     return NextResponse.json(
-      { message: 'Application submitted', id: result[0]?.id },
+      { message: 'Application submitted', id: result[0]?.id, twitter_id: twitter_id },
       { status: 201 }
     );
   } catch (error: any) {

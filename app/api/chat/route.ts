@@ -59,7 +59,7 @@ export async function POST(req: Request) {
 
 async function generateQuestion(previousResponses: string[]) {
   const response = await openai.chat.completions.create({
-    model: 'gpt-4-turbo',
+    model: 'gpt-3.5-turbo',
     messages: [
       {
         role: 'system',
@@ -78,15 +78,13 @@ async function generateQuestion(previousResponses: string[]) {
 }
 
 async function validateResponse(question: string, response: string) {
-  console.log('----', { question, response }, '----test-------');
-
   const prompt = `
     Here is the question: **"${question}"**  
     Here is the response: **"${response}"**  
   `;
 
   const validation = await openai.chat.completions.create({
-    model: 'gpt-4-turbo',
+    model: 'gpt-3.5-turbo',
     messages: [{ role: 'system', content: prompt }],
     max_tokens: 400,
     temperature: 0.5,
