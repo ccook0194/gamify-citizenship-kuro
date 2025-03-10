@@ -50,6 +50,6 @@ If irrelevant:
   - **Response:** "Helping others." ✅ *Relevant*  
   - **Response:** "I dunno." ❌ *Irrelevant, lacks effort*  
 
-Evaluate accordingly.`;
+Evaluate accordingly. Here is the question and answer`;
 
 export { questionsPrompt, validateResponsePrompt };

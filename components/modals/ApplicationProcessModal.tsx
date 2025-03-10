@@ -78,7 +78,7 @@ export default function ApplicationProcessModal({
       // Assume the API returns a new question text
       const nextQuestionText = response?.data?.question || response?.data?.message;
 
-      const newCount = chatCount + 1;
+      let newCount = chatCount + response?.data?.retry ? 0 : 1;
       setChatCount(newCount);
 
       if (newCount < maxChatQuestions) {
