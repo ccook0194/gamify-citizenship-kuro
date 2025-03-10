@@ -1,5 +1,4 @@
 import type { Metadata } from 'next';
-import { ReduxProvider } from '@/redux/provider';
 import NoiseOverlay from '@/components/NoiseOverlay';
 import { AuthProvider } from '../context/AuthContext';
 import './globals.css';

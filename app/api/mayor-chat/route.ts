@@ -17,37 +17,25 @@ export async function GET(req: Request) {
       return NextResponse.json({ error: 'Twitter ID is required' }, { status: 400 });
     }
 
+    // Check if an application with the same twitter_id already exists
+    const existingQuesAns = await db
+      .select()
+      .from(mayorChats)
+      .where(eq(mayorChats.twitter_id, twitterId));
+
+    if (existingQuesAns.length) {
+      return NextResponse.json(
+        { error: 'Chats already exists for this twitter_id' },
+        { status: 409 }
+      );
+    }
+
     const chats = await db
       .select()
       .from(mayorChats)
       .where(eq(citizenshipApplications.twitter_id, twitterId));
 
     return NextResponse.json({ chats }, { status: 200 });
-  } catch (error) {
-    return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
-  }
-}
-
-export async function POST(req: Request) {
-  if (req.method !== 'POST') {
-    return NextResponse.json({ error: 'Method not allowed' }, { status: 405 });
-  }
-
-  try {
-    const { twitter_id, messages } = await req.json(); // Expecting an array of { question, answer }
-
-    if (!twitter_id || !Array.isArray(messages)) {
-      return NextResponse.json({ error: 'Invalid request data' }, { status: 400 });
-    }
-
-    await db.insert(mayorChats).values({
-      twitter_id,
-      messages: JSON.stringify(messages),
-      created_at: sql`NOW()`,
-      updated_at: sql`NOW()`,
-    });
-
-    return NextResponse.json({ message: 'Chats saved successfully' }, { status: 201 });
   } catch (error) {
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
   }

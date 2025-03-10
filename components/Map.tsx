@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect, useRef, ReactNode } from 'react';
+import React, { useState, useEffect, useRef, ReactNode, useCallback } from 'react';
 import ExpandableChat from './ExpandableChat';
 import KuroStatus from '@/components/KuroStatus';
 import { Music2, Play, Pause, Volume2 } from 'lucide-react';
@@ -41,10 +41,6 @@ import CharacterStatsDialog from './CharacterStatsDialog';
 import AIAgentDialog from './AIAgentDialog';
 import moment from 'moment';
 import { useSelector } from 'react-redux';
-import { RootState, useAppDispatch } from '@/redux/store';
-import { Agent } from '@/redux/types/agent';
-import { fetchAgentActivity } from '@/redux/slices/activitySlice';
-import { increaseInteract } from '@/redux/slices/interactionSlice';
 import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useRouter } from 'next/navigation';
@@ -55,6 +51,7 @@ import { useSession } from 'next-auth/react';
 import axios from 'axios';
 import { Alert } from './ui/alert';
 import MotionAlert from './MotionAlert';
+import { debounce } from 'lodash';
 
 // Custom scrollbar styling
 const customScrollbarStyles = `
@@ -395,15 +392,7 @@ const initialQuestion = {
 };
 
 const MapComponent = ({ weather }: MapProps) => {
-  const router = useRouter();
-  const dispatch = useAppDispatch();
   const { data: session, status } = useSession();
-
-  // Agents activities and Conversations from Redux
-  const agents = useSelector((state: RootState) => state.agentActivity.agents as Agent[]);
-  const conversations = useSelector((state: RootState) => state.agentActivity.conversations);
-  const time = useSelector((state: RootState) => state.agentActivity.time);
-  const date = useSelector((state: RootState) => state.agentActivity.date);
 
   // Panning and zoom state
   const containerRef = useRef<HTMLDivElement>(null);
@@ -437,9 +426,18 @@ const MapComponent = ({ weather }: MapProps) => {
   const [isNight, setIsNight] = useState(false);
   const [isPlaying, setIsPlaying] = useState(false);
   const [volume, setVolume] = useState([0.5]);
-  const [citizenshipApplication, setCitizenshipApplication] = useState(null);
+
+  interface CitizenshipApplication {
+    status: string;
+    twitter_id: string;
+  }
+
+  const [citizenshipApplication, setCitizenshipApplication] =
+    useState<CitizenshipApplication | null>(null);
   const [showApplicationSuccessAlert, setShowApplicationSuccessAlert] = useState(false);
   const audioRef = useRef<HTMLAudioElement>(null);
+
+  const [isLoading, setIsLoading] = useState<boolean>(false);
 
   const [messages, setMessages] = useState<
     { id: string; type: string; text: string | ReactNode }[]
@@ -473,23 +471,57 @@ const MapComponent = ({ weather }: MapProps) => {
   }, []);
 
   useEffect(() => {
-    if (status === 'authenticated' && session?.user?.id) {
+    if (status === 'authenticated' && session?.user) {
       handleCitizenshipApplication(session.user);
     }
-  }, [status]);
+  }, [status, session?.user]);
+
+  useEffect(() => {
+    if (citizenshipApplication?.twitter_id && citizenshipApplication?.status !== 'approved') {
+      checkApplicationStatusDebounced(citizenshipApplication.twitter_id);
+    }
+  }, [citizenshipApplication?.twitter_id, citizenshipApplication?.status]);
+
+  const checkApplicationStatusDebounced = useCallback(
+    debounce(async (twitterId: string) => {
+      await checkAIUpdatedApplicationStatus(twitterId);
+    }, 300),
+    []
+  );
+
+  async function checkAIUpdatedApplicationStatus(twitterId: string) {
+    setIsLoading(true);
+    try {
+      const response = await axios.get(`/api/mayor-review`, {
+        params: { twitter_id: twitterId },
+      });
+
+      if (response.data.status) {
+        await handleCitizenshipApplication(session?.user);
+      }
+    } catch (error) {
+      setIsLoading(false);
+      console.error('Error fetching citizenship status:', error);
+    } finally {
+      setIsLoading(false);
+    }
+  }
 
   async function handleCitizenshipApplication(user: any) {
+    setIsLoading(true);
     try {
-      const isExisting = await checkCitizenshipApplication(user.id);
-      if (!isExisting) {
+      const isExists = await checkIfCitizenshipApplicationExists(user.id);
+      if (!isExists) {
         await applyCitizenship(user);
       }
     } catch (error) {
       console.error('Error handling citizenship application:', error);
+    } finally {
+      setIsLoading(false);
     }
   }
 
-  async function checkCitizenshipApplication(twitterId: string) {
+  async function checkIfCitizenshipApplicationExists(twitterId: string) {
     if (!twitterId) {
       console.error('Twitter ID is missing');
       return false;
@@ -508,33 +540,23 @@ const MapComponent = ({ weather }: MapProps) => {
   }
 
   async function applyCitizenship(user: any) {
-    if (!user) return;
+    if (!user?.id) {
+      console.error('Id missing');
+      return;
+    }
 
     try {
-      const response = await axios.post(`/api/citizenship/apply`, {
+      await axios.post(`/api/citizenship/apply`, {
         twitter_id: user.id,
         twitter_name: user.name,
         twitter_profile_picture: user.image,
-      });
-      const twitterId = response?.data?.twitter_id;
-      if (twitterId) {
-        await addQuestionsAnswers(twitterId, messages);
-      }
-
-      setShowApplicationSuccessAlert(true);
-    } catch (error) {
-      console.error('Error applying for citizenship:', error);
-    }
-  }
-
-  async function addQuestionsAnswers(twitterId: string, messages: any) {
-    try {
-      await axios.post(`/api/mayor-chat`, {
-        twitter_id: twitterId,
         messages,
       });
+
+      setShowApplicationSuccessAlert(true);
+      sessionStorage.removeItem('applicationMessages');
     } catch (error) {
-      console.error('Error saving answers:', error);
+      console.error('Error applying for citizenship:', error);
     }
   }
 
@@ -575,79 +597,6 @@ const MapComponent = ({ weather }: MapProps) => {
     }, 200);
     return () => clearInterval(timeInterval);
   }, []);
-
-  useEffect(() => {
-    if (moment(currentTime).format('YYYY-MM-DD') !== moment(currentTime).format('YYYY-MM-DD'))
-      handlePlanDate(currentTime);
-
-    if (currentTime.getMinutes() % 30 == 0 && currentTime.getHours() >= 6)
-      handleFetchActivity(currentTime);
-  }, [currentTime]);
-
-  useEffect(() => {
-    if (!agents) return;
-
-    let newPosition: Array<string> = [];
-    aiAgents.forEach((agent) => {
-      const agentActivity = agents.find((item) => item.name == agent.name);
-      const newLocation = locations.find((location) => location.name == agentActivity?.location[0]);
-
-      if (newLocation) newPosition.push(newLocation.name);
-      else newPosition.push(positions[agent.id - 1]);
-    });
-
-    setPositions(newPosition);
-  }, [agents]);
-
-  useEffect(() => {
-    if (conversations) {
-      Object.values(conversations!).forEach((conversation) => {
-        if (conversation[0].length < 2) return;
-        if (conversation[0][0].name == 'Kuro') {
-          const aiAgent = getAgentWithName(conversation[0][1].name);
-          if (aiAgent)
-            dispatch(
-              increaseInteract({
-                index: aiAgent.id,
-                date: `${moment(currentTime).format('YYYY-MM-DD')} ${time}`,
-              })
-            );
-        }
-        if (conversation[0][1].name == 'Kuro') {
-          const aiAgent = getAgentWithName(conversation[0][0].name);
-          if (aiAgent)
-            dispatch(
-              increaseInteract({
-                index: aiAgent.id,
-                date: `${moment(currentTime).format('YYYY-MM-DD')} ${time}`,
-              })
-            );
-        }
-      });
-    }
-  }, [conversations]);
-
-  const handlePlanDate = async (date: Date) => {
-    try {
-      const response = await fetch('/api/plan', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ date: moment(date).format('YYYY-MM-DD') }),
-      });
-
-      if (!response.ok) throw new Error('Failed to fetch time');
-
-      const data = await response.json();
-    } catch (error) {
-      console.error('Error fetching time:', error);
-    }
-  };
-
-  const handleFetchActivity = async (date: Date) => {
-    dispatch(fetchAgentActivity(date));
-  };
 
   const handleLocationClick = (location: Location) => {
     setSelectedLocation(location);
@@ -925,7 +874,12 @@ const MapComponent = ({ weather }: MapProps) => {
         </div>
 
         <div className="absolute" style={{ top: '2%', left: '2%', zIndex: 1100 }}>
-          <KuroStatus citizenshipApplication={citizenshipApplication} />
+          <KuroStatus
+            citizenshipApplication={citizenshipApplication}
+            handleCitizenshipApplication={handleCitizenshipApplication}
+            isLoading={isLoading}
+            setIsLoading={setIsLoading}
+          />
         </div>
 
         {/* Dialogs */}
@@ -953,7 +907,12 @@ const MapComponent = ({ weather }: MapProps) => {
 
                   <div className="max-h-[75vh] overflow-y-auto scroll-smooth">
                     {selectedLocation?.name === 'Town Hall' && status !== 'authenticated' ? (
-                      <ApplicationProcessModal messages={messages} setMessages={setMessages} />
+                      <ApplicationProcessModal
+                        messages={messages}
+                        setMessages={setMessages}
+                        isLoading={isLoading}
+                        setIsLoading={setIsLoading}
+                      />
                     ) : (
                       <>
                         <Tabs defaultValue="info" className="w-full p-4">

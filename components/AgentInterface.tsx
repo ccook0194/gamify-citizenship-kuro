@@ -6,8 +6,6 @@ import { Textarea } from "@/components/ui/textarea"
 import { Button } from "@/components/ui/button"
 import { ScrollArea } from "@/components/ui/scroll-area"
 import { Cat, Send } from 'lucide-react'
-import { useSelector } from "react-redux";
-import { RootState } from "@/redux/store";
 
 type Thought = {
   id: number
@@ -16,24 +14,8 @@ type Thought = {
 }
 
 export default function AgentInterface() {
-  const agents = useSelector((state: RootState) => state.agentActivity.agents)
-
   const [thoughts, setThoughts] = useState<Thought[]>([])
   const [newThought, setNewThought] = useState('')
-
-
-  useEffect(() => {
-    if ( agents === undefined ) return ;
-    const agent = agents.find((agent) => agent.name == 'Kuro')
-    if ( agent ) {
-      const newThought = {
-        id: Date.now(),
-        content: agent.thoughts,
-        timestamp: new Date(),
-      }
-      setThoughts(prev => [...prev, newThought].slice(-10))
-    }
-  }, [agents])
 
   const handleSubmitThought = (e: React.FormEvent) => {
     e.preventDefault()

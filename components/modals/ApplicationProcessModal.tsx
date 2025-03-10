@@ -21,6 +21,12 @@ const itemVariants = {
   exit: { opacity: 0, y: 20, transition: { duration: 0.3 } },
 };
 
+const initialQuestion = {
+  id: 'initial',
+  type: 'question',
+  text: "Welcome to Kuro Town! I'm Mayor. Before we get started, I'd love to learn more about you!, Are you already registered with us?",
+};
+
 const finalQuestion = {
   id: 'final',
   type: 'question',
@@ -39,15 +45,18 @@ const finalQuestion = {
 export default function ApplicationProcessModal({
   messages,
   setMessages,
+  isLoading,
+  setIsLoading,
 }: {
   messages: any;
   setMessages: any;
+  isLoading: boolean;
+  setIsLoading: any;
 }) {
-  const [isRegistered, setIsRegistered] = useState<boolean | null>(null);
+  const [isRegistered, setIsRegistered] = useState<boolean | null>(messages.length == 1 ? null : false);
   const [inputValue, setInputValue] = useState<string>('');
-  const [chatCount, setChatCount] = useState<number>(0);
+  const [chatCount, setChatCount] = useState<number>(messages.length);
   const maxChatQuestions = 5;
-  const [isLoading, setIsLoading] = useState<boolean>(false);
 
   function getUserUUID() {
     let userUUID = sessionStorage.getItem('userUUID');
@@ -121,6 +130,12 @@ export default function ApplicationProcessModal({
     }
   };
 
+  const handleRestart = () => {
+    setMessages([initialQuestion]);
+    setChatCount(1);
+    setIsRegistered(null);
+  }
+
   return (
     <div className="p-4 flex flex-col">
       {/* render questions and answers */}
@@ -152,7 +167,7 @@ export default function ApplicationProcessModal({
       ) : (
         <>
           {/* Show radio selection only for the initial question */}
-          {isRegistered === null && (
+          {isRegistered === null && chatCount < maxChatQuestions && (
             <DelayedRender waitBeforeShow={3200}>
               <motion.div
                 className="rounded-2xl border-2 border-black bg-white p-3 shadow-[2px_2px_0_0_black] w-1/2 max-w-sm mb-2 self-end ml-auto"
@@ -188,11 +203,18 @@ export default function ApplicationProcessModal({
                 size="icon"
                 onClick={handleNextQuestion}
                 className="bg-blue-500 text-white absolute right-2 top-3"
-                disabled={!inputValue.trim()}
+                disabled={!inputValue.trim() || isLoading}
               >
                 <Send className="w-4 h-4" />
               </Button>
             </div>
+          )}
+
+          {/* If chat is completed, show the restart button */}
+          {isRegistered === false && chatCount == maxChatQuestions && (
+            <Button onClick={handleRestart} className="mt-4 bg-blue-500 text-white">
+              Restart Application
+            </Button>
           )}
         </>
       )}
