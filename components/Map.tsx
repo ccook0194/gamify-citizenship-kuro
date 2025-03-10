@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, ReactNode } from 'react';
 import ExpandableChat from './ExpandableChat';
 import KuroStatus from '@/components/KuroStatus';
 import { Music2, Play, Pause, Volume2 } from 'lucide-react';
@@ -387,6 +387,13 @@ interface MapProps {
   currentEvent?: string;
 }
 
+// Primary chat objects
+const initialQuestion = {
+  id: 'initial',
+  type: 'question',
+  text: "Welcome to Kuro Town! I'm Mayor. Before we get started, I'd love to learn more about you!, Are you already registered with us?",
+};
+
 const MapComponent = ({ weather }: MapProps) => {
   const router = useRouter();
   const dispatch = useAppDispatch();
@@ -434,6 +441,19 @@ const MapComponent = ({ weather }: MapProps) => {
   const [showApplicationSuccessAlert, setShowApplicationSuccessAlert] = useState(false);
   const audioRef = useRef<HTMLAudioElement>(null);
 
+  const [messages, setMessages] = useState<
+    { id: string; type: string; text: string | ReactNode }[]
+  >(() => {
+    // Try to get messages from sessionStorage on initial load
+    const savedMessages = sessionStorage.getItem('applicationMessages');
+    return savedMessages ? JSON.parse(savedMessages) : [initialQuestion];
+  });
+
+  // Update sessionStorage whenever messages change
+  useEffect(() => {
+    sessionStorage.setItem('applicationMessages', JSON.stringify(messages));
+  }, [messages]);
+
   useEffect(() => {
     if (audioRef.current) {
       audioRef.current.volume = volume[0];
@@ -480,7 +500,7 @@ const MapComponent = ({ weather }: MapProps) => {
         params: { twitter_id: twitterId },
       });
       setCitizenshipApplication(response?.data);
-      return !!response?.data; // Returns true if application exists
+      return !!response?.data;
     } catch (error) {
       console.error('Error fetching citizenship status:', error);
       return false;
@@ -496,12 +516,25 @@ const MapComponent = ({ weather }: MapProps) => {
         twitter_name: user.name,
         twitter_profile_picture: user.image,
       });
-
-      if (response?.data) {
-        setShowApplicationSuccessAlert(true);
+      const twitterId = response?.data?.twitter_id;
+      if (twitterId) {
+        await addQuestionsAnswers(twitterId, messages);
       }
+
+      setShowApplicationSuccessAlert(true);
     } catch (error) {
       console.error('Error applying for citizenship:', error);
+    }
+  }
+
+  async function addQuestionsAnswers(twitterId: string, messages: any) {
+    try {
+      await axios.post(`/api/mayor-chat`, {
+        twitter_id: twitterId,
+        messages,
+      });
+    } catch (error) {
+      console.error('Error saving answers:', error);
     }
   }
 
@@ -607,7 +640,6 @@ const MapComponent = ({ weather }: MapProps) => {
       if (!response.ok) throw new Error('Failed to fetch time');
 
       const data = await response.json();
-      console.log('success plan: ' + data.success);
     } catch (error) {
       console.error('Error fetching time:', error);
     }
@@ -921,7 +953,7 @@ const MapComponent = ({ weather }: MapProps) => {
 
                   <div className="max-h-[75vh] overflow-y-auto scroll-smooth">
                     {selectedLocation?.name === 'Town Hall' && status !== 'authenticated' ? (
-                      <ApplicationProcessModal />
+                      <ApplicationProcessModal messages={messages} setMessages={setMessages} />
                     ) : (
                       <>
                         <Tabs defaultValue="info" className="w-full p-4">
@@ -1100,7 +1132,7 @@ const MapComponent = ({ weather }: MapProps) => {
       {showApplicationSuccessAlert && (
         <MotionAlert
           title="Congratulations"
-          message="You have successfully applied for citizenship in Kuro's World"
+          message="You have successfully applied for citizenship in Kuro's Universe"
           onClose={() => setShowApplicationSuccessAlert(false)}
         />
       )}

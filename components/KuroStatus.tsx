@@ -102,6 +102,29 @@ export default function KuroWorld({ citizenshipApplication }: any) {
     }
   }, [agents, name]);
 
+  useEffect(() => {
+    if (session?.user?.id) {
+      checkCitizenshipApplicationStatus(session?.user?.id);
+    }
+  }, [session?.user?.id]);
+
+  async function checkCitizenshipApplicationStatus(twitterId: string) {
+    if (twitterId && citizenshipApplication?.status === 'pending') {
+      try {
+        const response = await axios.get(`/api/mayor-review`, {
+          params: { twitter_id: twitterId },
+        });
+        return !!response?.data;
+      } catch (error) {
+        console.error('Error fetching citizenship status:', error);
+        return false;
+      }
+    } else {
+      console.error('Twitter ID is missing');
+      return false;
+    }
+  }
+
   const getMoodEmoji = (mood: string) => {
     switch (mood) {
       case 'Ecstatic':
@@ -220,7 +243,13 @@ export default function KuroWorld({ citizenshipApplication }: any) {
                     </p>
                   </motion.div>
                   <div className="text-right mt-3">
-                    <Button variant="outline" onClick={() => signOut()}>
+                    <Button
+                      variant="outline"
+                      onClick={() => {
+                        signOut();
+                        sessionStorage.clear();
+                      }}
+                    >
                       Logout
                     </Button>
                   </div>

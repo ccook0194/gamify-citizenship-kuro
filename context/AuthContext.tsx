@@ -4,7 +4,6 @@ import { createContext, useState, useEffect, useContext, ReactNode } from 'react
 import { useRouter } from 'next/navigation';
 import { SessionProvider } from 'next-auth/react';
 
-// Define the Auth Context type
 interface AuthContextType {
   authorized: boolean;
   loading: boolean;
@@ -18,10 +17,9 @@ interface AuthProviderProps {
   children: ReactNode;
 }
 
-// Auth Provider Component
 export const AuthProvider = ({ children }: AuthProviderProps) => {
   const [authorized, setAuthorized] = useState<boolean>(false);
-  const [loading, setLoading] = useState<boolean>(false);
+  const [loading, setLoading] = useState<boolean>(true);
   const router = useRouter();
 
   useEffect(() => {
@@ -32,10 +30,8 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
     setLoading(false);
   }, []);
 
-  // Login Function
   const login = async (password: string) => {
     setLoading(true);
-
     const res = await fetch('/api/login', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -45,17 +41,16 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
 
     if (res.ok) {
       setAuthorized(true);
-      localStorage.setItem('authorized', JSON.stringify(true));
+      localStorage.setItem('authorized', 'true');
     } else {
       alert('Invalid credentials');
     }
     router.push('/');
   };
 
-  // Logout Function
   const logout = () => {
     setAuthorized(false);
-    localStorage.removeItem('user');
+    localStorage.removeItem('authorized');
     router.push('/');
   };
 
@@ -68,7 +63,6 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
   );
 };
 
-// Custom Hook to use Auth Context
 export const useAuth = (): AuthContextType => {
   const context = useContext(AuthContext);
   if (!context) {
