@@ -3,7 +3,7 @@ import { citizenshipApplications } from '@/db/schema/citizenshipSchema';
 import { eq, sql } from 'drizzle-orm/sql';
 import { db } from '@/db';
 import { generateRandomTicketNumber } from '@/utils/randomTicketNumber';
-import { log } from 'console';
+import { mayorChats } from '@/db/schema/mayorChatSchema';
 
 async function generateUniqueTicketNumber(): Promise<string> {
   let ticketNumber: string = '';
@@ -33,10 +33,17 @@ export async function POST(req: Request) {
       twitter_username,
       status,
       status_remark,
+      messages,
     } = body;
 
+    // check if twitter_id is required
     if (!twitter_id) {
-      return NextResponse.json({ error: 'Missing twitter_id' }, { status: 400 });
+      return NextResponse.json({ error: 'twitter_id is required' }, { status: 400 });
+    }
+
+    // check if messages are required
+    if (!messages?.length) {
+      return NextResponse.json({ error: 'messages are required' }, { status: 400 });
     }
 
     // Check if an application with the same twitter_id already exists
@@ -45,6 +52,7 @@ export async function POST(req: Request) {
       .from(citizenshipApplications)
       .where(eq(citizenshipApplications.twitter_id, twitter_id));
 
+    // if application already exists, return error
     if (existingApplication.length) {
       return NextResponse.json(
         { error: 'Application already exists for this twitter_id' },
@@ -55,6 +63,7 @@ export async function POST(req: Request) {
     // randomly generated unique ticket number
     const ticketNumber = await generateUniqueTicketNumber();
 
+    // insert application
     const result = await db
       .insert(citizenshipApplications)
       .values({
@@ -70,11 +79,21 @@ export async function POST(req: Request) {
       })
       .returning({ id: citizenshipApplications.id });
 
+    // insert chats
+    await db.insert(mayorChats).values({
+      twitter_id,
+      messages: JSON.stringify(messages),
+      created_at: sql`NOW()`,
+      updated_at: sql`NOW()`,
+    });
+
+    // return response
     return NextResponse.json(
       { message: 'Application submitted', id: result[0]?.id, twitter_id: twitter_id },
       { status: 201 }
     );
   } catch (error: any) {
+    // return error
     return NextResponse.json({ error: 'Database error', details: error.message }, { status: 500 });
   }
 }

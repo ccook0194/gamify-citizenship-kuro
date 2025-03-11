@@ -1,8 +1,7 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import Image from 'next/image';
-import { Agent } from '@/redux/types/agent';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   MapPin,
@@ -16,11 +15,11 @@ import {
 } from 'lucide-react';
 import { GradientButton } from '@/components/ui/gradient-button';
 import { useSelector } from 'react-redux';
-import { RootState } from '@/redux/store';
 import { capitalizeFirstLetter } from '@/lib/utils';
 import { signOut, useSession } from 'next-auth/react';
 import { Button } from '@/components/ui/button';
 import axios from 'axios';
+import { debounce } from 'lodash';
 
 interface Event {
   location: string;
@@ -62,15 +61,13 @@ const hoverPop = {
   whileTap: { scale: 0.97 },
 };
 
-export default function KuroWorld({ citizenshipApplication }: any) {
+export default function KuroWorld({ citizenshipApplication, isLoading }: any) {
   const { data: session, status } = useSession();
-
-  const agents = useSelector((state: RootState) => state.agentActivity.agents as Agent[]);
   const [stats, setStats] = useState({
-    activity: 'Napping in the sun',
+    activity: 'Waiting for the awakening...',
     mood: 'Happy',
     energy: 60,
-    thoughts: 'What adventure awaits today?',
+    thoughts: 'Waiting for the awakening...',
   });
 
   const [currentEvent, setCurrentEvent] = useState<Event | undefined>();
@@ -78,52 +75,11 @@ export default function KuroWorld({ citizenshipApplication }: any) {
   const [isCollapsed, setIsCollapsed] = useState(true);
 
   useEffect(() => {
-    if (!agents) return;
-
-    const agent = agents.find((agent) => agent.name == 'Kuro');
-
-    if (agent) {
-      const newEvent = {
-        location: agent.location[0],
-        description: agent.activity.split('>')[0],
-      };
-
-      setStats((prev) => {
-        return {
-          activity: agent.activity.split('>')[0],
-          mood: agent.emotion,
-          energy: agent.basic_needs.energy * 10,
-          thoughts: agent.thoughts.includes('Kuro') ? prev.thoughts : agent.thoughts,
-        };
-      });
-
-      setCurrentEvent(newEvent);
-      setPastEvents((prev) => [newEvent, ...prev].slice(0, 3));
-    }
-  }, [agents, name]);
-
-  useEffect(() => {
-    if (session?.user?.id) {
-      checkCitizenshipApplicationStatus(session?.user?.id);
-    }
-  }, [session?.user?.id]);
-
-  async function checkCitizenshipApplicationStatus(twitterId: string) {
-    if (twitterId && citizenshipApplication?.status === 'pending') {
-      try {
-        const response = await axios.get(`/api/mayor-review`, {
-          params: { twitter_id: twitterId },
-        });
-        return !!response?.data;
-      } catch (error) {
-        console.error('Error fetching citizenship status:', error);
-        return false;
-      }
-    } else {
-      console.error('Twitter ID is missing');
-      return false;
-    }
-  }
+    setCurrentEvent({
+      location: "Kuro's House",
+      description: "Waiting for the awakening..."
+    });
+  }, []);
 
   const getMoodEmoji = (mood: string) => {
     switch (mood) {
@@ -145,8 +101,6 @@ export default function KuroWorld({ citizenshipApplication }: any) {
         return '😺';
     }
   };
-
-  const toggleCollapse = () => setIsCollapsed((prev) => !prev);
 
   return (
     <div className="mt-4 ml-4 w-[340px] relative">
@@ -187,7 +141,7 @@ export default function KuroWorld({ citizenshipApplication }: any) {
                 {citizenshipApplication?.name || session?.user?.name || 'Kuro Status'}
               </h1>
             </div>
-            <GradientButton onClick={toggleCollapse} size="md">
+            <GradientButton onClick={() => setIsCollapsed((prev) => !prev)} size="md">
               {isCollapsed ? '▼' : '▲'}
             </GradientButton>
           </div>
@@ -201,11 +155,13 @@ export default function KuroWorld({ citizenshipApplication }: any) {
                   <motion.div
                     className={`
                   ${
-                    citizenshipApplication?.status === 'pending'
+                    isLoading
+                      ? 'bg-gray-100'
+                      : citizenshipApplication?.status === 'pending'
                       ? 'bg-yellow-100'
                       : citizenshipApplication?.status === 'rejected'
-                      ? 'bg-red-300'
-                      : 'bg-green-200'
+                      ? 'bg-red-100'
+                      : 'bg-green-100'
                   }  
                     rounded-2xl border-2 border-black p-3 shadow-[2px_2px_0_0_black] mb-2`}
                     variants={itemVariants}
@@ -215,16 +171,23 @@ export default function KuroWorld({ citizenshipApplication }: any) {
                       <Verified className="w-5 h-5 text-blue-600" />
                       <h3 className="text-sm font-title font-bold text-black">Status</h3>
                     </div>
-                    <p className="text-sm text-gray-800 italic capitalize">
-                      {citizenshipApplication?.status
-                        ? `Citizenship ${citizenshipApplication?.status}`
-                        : 'Checking status...'}
-                    </p>
 
-                    {citizenshipApplication?.status === 'rejected' && (
-                      <p className="text-xs text-gray-600 italic">
-                        ({citizenshipApplication?.status_remark})
-                      </p>
+                    {isLoading ? (
+                      <p className="text-sm text-gray-800 italic capitalize">Checking status...</p>
+                    ) : (
+                      <>
+                        <p className="text-sm text-gray-800 italic capitalize">
+                          {citizenshipApplication?.status
+                            ? `Citizenship ${citizenshipApplication?.status}`
+                            : 'Checking status...'}
+                        </p>
+
+                        {citizenshipApplication?.status === 'rejected' && (
+                          <p className="text-xs text-gray-600 italic">
+                            ({citizenshipApplication?.status_remark})
+                          </p>
+                        )}
+                      </>
                     )}
                   </motion.div>
 
@@ -247,7 +210,6 @@ export default function KuroWorld({ citizenshipApplication }: any) {
                       variant="outline"
                       onClick={() => {
                         signOut();
-                        sessionStorage.clear();
                       }}
                     >
                       Logout

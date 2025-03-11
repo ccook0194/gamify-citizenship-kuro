@@ -1,10 +1,10 @@
 import { NextResponse } from 'next/server';
 import { OpenAI } from 'openai';
-import { questionsPrompt } from './prompt';
+import { questionsPrompt, validateResponsePrompt } from './prompt';
 
 const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
 
-const sessions: Record<string, { questions: string[]; responses: string[] }> = {};
+const sessions = new Map<string, { questions: string[]; responses: string[] }>();
 
 export async function POST(req: Request) {
   try {
@@ -15,20 +15,21 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: 'User ID is required' }, { status: 400 });
     }
 
-    if (!sessions[userId]) {
-      sessions[userId] = {
+    if (!sessions.has(userId)) {
+      sessions.set(userId, {
         questions: [],
         responses: [],
-      };
+      });
     }
 
-    const session = sessions[userId];
+    const session = sessions.get(userId)!;
 
     // If first question has never been asked, start from the first one
     if (session.questions.length === 0) {
       const firstQuestion =
         "Welcome to Kuro Town! I'm the Mayor. Before we get started, I'd love to learn more about you! Are you already registered with us?";
       session.questions.push(firstQuestion);
+      // return NextResponse.json({ question: firstQuestion });
     }
 
     // Get the last asked question
@@ -36,7 +37,6 @@ export async function POST(req: Request) {
 
     // Validate user response if provided
     if (userResponse) {
-      session.responses.push(userResponse);
       const validation = await validateResponse(lastQuestion, userResponse);
 
       if (!validation.isRelevant) {
@@ -45,54 +45,62 @@ export async function POST(req: Request) {
           retry: true,
         });
       }
+
+      session.responses.push(userResponse);
     }
 
     // Generate next question dynamically based on previous responses
-    const nextQuestion = await generateQuestion(session.responses);
+    const nextQuestion = await generateQuestion(session.questions);
     session.questions.push(nextQuestion);
 
     return NextResponse.json({ question: nextQuestion });
   } catch (error: any) {
+    console.error('Chat API error:', error);
     return NextResponse.json({ error: 'Server error', details: error.message }, { status: 500 });
   }
 }
 
-async function generateQuestion(previousResponses: string[]) {
-  const response = await openai.chat.completions.create({
-    model: 'gpt-3.5-turbo',
-    messages: [
-      {
-        role: 'system',
-        content: questionsPrompt + 'Here are the previous questions: ' + previousResponses,
-      },
-    ],
-    max_tokens: 400,
-  });
+async function generateQuestion(previousQuestions: string[]) {
+  try {
+    const response = await openai.chat.completions.create({
+      model: 'gpt-3.5-turbo',
+      messages: [
+        {
+          role: 'system',
+          content: questionsPrompt + '\nPrevious questions:\n' + previousQuestions.join('\n'),
+        },
+      ],
+      max_tokens: 400,
+      temperature: 0.7,
+    });
 
-  const choice = response?.choices?.[0];
-  if (choice.message && choice.message.content) {
-    return choice.message.content.trim();
-  } else {
-    return 'What makes you excited about Kuro?';
+    return (
+      response.choices[0]?.message?.content?.trim() || 'What makes you excited about Kuro Town?'
+    );
+  } catch (error) {
+    console.error('Error generating question:', error);
+    return 'What makes you excited about Kuro Town?';
   }
 }
 
 async function validateResponse(question: string, response: string) {
-  const prompt = `
-    Here is the question: **"${question}"**  
-    Here is the response: **"${response}"**  
-  `;
-
-  const validation = await openai.chat.completions.create({
-    model: 'gpt-3.5-turbo',
-    messages: [{ role: 'system', content: prompt }],
-    max_tokens: 400,
-    temperature: 0.5,
-  });
-
   try {
-    return JSON.parse(validation.choices[0].message?.content || '{}');
-  } catch {
+    const prompt = `${validateResponsePrompt}
+      Question: "${question}"
+      Response: "${response}"
+    `;
+
+    const validation = await openai.chat.completions.create({
+      model: 'gpt-3.5-turbo',
+      messages: [{ role: 'system', content: prompt }],
+      max_tokens: 400,
+      temperature: 0.5,
+    });
+
+    const content = validation.choices[0]?.message?.content;
+    return content ? JSON.parse(content) : { isRelevant: true };
+  } catch (error) {
+    console.error('Error validating response:', error);
     return { isRelevant: true };
   }
 }

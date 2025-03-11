@@ -1,11 +1,8 @@
 import React, { useEffect, useState } from 'react'
-import { Agent } from "@/redux/types/agent"
-import { AgentInteractState } from "@/redux/types/interactions"
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 import { Progress } from "@/components/ui/progress"
 import { MapPin, Heart, MessageCircle, Clock } from 'lucide-react'
 import { useSelector } from "react-redux"
-import { RootState } from "@/redux/store"
 import { capitalizeFirstLetter } from '@/lib/utils'
 import { motion } from 'framer-motion'
 
@@ -56,37 +53,12 @@ interface AIAgentDialogProps {
 const AIAgentDialog = ({ open, onOpenChange, agent, date }: AIAgentDialogProps) => {
   if (!agent) return null
 
-  const agents = useSelector((state: RootState) => state.agentActivity.agents as Agent[])
-  const agentInteracts = useSelector((state: RootState) => state.agentInteracts as AgentInteractState).interacts
-
   const [mood, setMood] = useState("Happy")
-  const [activity, setActivity] = useState("")
+  const [activity, setActivity] = useState("Waiting for the awakening...")
   const [location, setLocation] = useState(agent.location)
   const [relationWithKuro, setRelationWithKuro] = useState(0)
   const [interactCount, setInteractCount] = useState(0)
   const [interactDate, setInteractDate] = useState<Date | null>(null)
-
-  useEffect(() => {
-    if (!agents || !agent) return;
-    
-    const agentActivity = agents.find((agt) => agt.name === agent.name);
-    const interact = agentInteracts[agent.id - 1];
-
-    if (agentActivity) {
-      setMood(agentActivity.emotion)
-      setActivity(agentActivity.activity.split('>')[0])
-      setLocation(agentActivity.location.join(" > "))
-      setRelationWithKuro(agentActivity.social_relationships['Kuro']?.closeness / 2 | 0)  
-    } else {
-      setMood("Happy")
-      setActivity("")
-      setLocation(agent.location)
-      setRelationWithKuro(0)
-    }
-    
-    setInteractCount(interact.totalInteractions)
-    if (interact.lastInteractDate) setInteractDate(new Date(interact.lastInteractDate!))
-  }, [agent, agents])
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>

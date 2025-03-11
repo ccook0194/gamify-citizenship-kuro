@@ -1,10 +1,8 @@
 import React, { useEffect, useState } from 'react'
-import { Agent } from "@/redux/types/agent"
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 import { Progress } from "@/components/ui/progress"
 import { Cat, Battery, Brain, PlayCircle, HeartPulse, Heart } from 'lucide-react'
 import { useSelector } from "react-redux"
-import { RootState } from "@/redux/store"
 import { capitalizeFirstLetter } from '@/lib/utils'
 import { motion } from 'framer-motion'
 
@@ -43,32 +41,13 @@ interface CharacterStatsDialogProps {
 }
 
 const CharacterStatsDialog = ({ open, onOpenChange, name }: CharacterStatsDialogProps) => {
-  const agents = useSelector((state: RootState) => state.agentActivity.agents as Agent[])
   const [stats, setStats] = useState({
-    activity: "Napping in the sun",
+    activity: "Waiting for the awakening...",
     mood: "Happy",
     energy: 60,
-    thoughts: "I wonder what adventure awaits me today!",
+    thoughts: "Waiting for the awakening...",
     relationWithKuro: 0
   })
-
-  useEffect(() => {
-    if (!agents) return;
-
-    const agent = agents.find((agent) => agent.name == name)
-
-    if ( agent ) {
-      setStats((prev) => {
-        return {
-          activity: agent.activity.split('>')[0],
-          mood:  agent.emotion,
-          energy: agent.basic_needs.energy * 10,
-          thoughts: agent.thoughts.includes(name) ? prev.thoughts : agent.thoughts,
-          relationWithKuro: agent.social_relationships['Kuro']?.closeness / 2 | 0
-        }
-      })
-    }
-  }, [agents, name]);
 
   const getMoodEmoji = (mood: string) => {
     switch (mood) {

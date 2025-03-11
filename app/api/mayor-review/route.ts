@@ -18,6 +18,7 @@ export async function GET(req: Request) {
   try {
     const { searchParams } = new URL(req.url);
     const twitter_id = searchParams.get('twitter_id');
+
     if (!twitter_id) {
       return NextResponse.json({ error: 'Missing twitter_id.' }, { status: 400 });
     }
@@ -27,19 +28,36 @@ export async function GET(req: Request) {
       .select()
       .from(mayorChats)
       .where(eq(mayorChats.twitter_id, twitter_id));
+
     if (!userChats || userChats.length === 0) {
       return NextResponse.json({ error: 'No chat history found for the user.' }, { status: 404 });
     }
+
     const { messages } = userChats[0] as { messages: any[] };
 
-    const aiResponse = await analyzeAnswersWithAI(messages);
-    let evaluationResults = JSON.parse(aiResponse || '{}');
-    const correctPercentage = evaluationResults?.score || 0;
-
+    // Fetch the existing citizenship application
     const result = await db
       .select()
       .from(citizenshipApplications)
       .where(eq(citizenshipApplications.twitter_id, twitter_id));
+
+    if (!result.length) {
+      return NextResponse.json({ error: 'Citizenship application not found.' }, { status: 404 });
+    }
+
+    const currentStatus = result[0].status as 'pending' | 'approved' | 'rejected';
+
+    // If already approved, return early and do not modify the status
+    if (currentStatus === 'approved') {
+      return NextResponse.json({
+        status: 'approved',
+        status_remark: result[0].status_remark || 'Already approved.',
+      });
+    }
+
+    const aiResponse = await analyzeAnswersWithAI(messages);
+    let evaluationResults = JSON.parse(aiResponse || '{}');
+    const correctPercentage = evaluationResults?.score || 0;
 
     // Evaluate Twitter data completeness
     const twitterCompleteness = checkTwitterDataCompleteness({
@@ -50,7 +68,7 @@ export async function GET(req: Request) {
 
     let status: 'pending' | 'approved' | 'rejected' = 'pending';
     let status_remark =
-      evaluationResults?.remark || 'Incorrect answers or missing twitter details.';
+      evaluationResults?.remark || 'Incorrect answers or missing Twitter details.';
 
     if (correctPercentage >= 70 && twitterCompleteness >= 70) {
       status = 'approved';
@@ -60,7 +78,7 @@ export async function GET(req: Request) {
       status = 'rejected';
     }
 
-    // Update user status in database
+    // Update user status in database (only if not approved)
     await db
       .update(citizenshipApplications)
       .set({ status, status_remark })

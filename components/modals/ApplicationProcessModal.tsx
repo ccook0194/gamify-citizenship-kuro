@@ -27,6 +27,12 @@ const itemVariants = {
   exit: { opacity: 0, y: 20, scale: 0.95, transition: { duration: 0.3 } },
 };
 
+const initialQuestion = {
+  id: 'initial',
+  type: 'question',
+  text: "Welcome to Kuro Town! I'm Mayor. Before we get started, I'd love to learn more about you!, Are you already registered with us?",
+};
+
 const finalQuestion = {
   id: 'final',
   type: 'question',
@@ -79,16 +85,19 @@ const getCurrentTime = () => {
 export default function ApplicationProcessModal({
   messages,
   setMessages,
+  isLoading,
+  setIsLoading,
 }: {
   messages: any;
   setMessages: any;
+  isLoading: boolean;
+  setIsLoading: any;
 }) {
-  const [isRegistered, setIsRegistered] = useState<boolean | null>(null);
+  const [isRegistered, setIsRegistered] = useState<boolean | null>(messages.length == 1 ? null : false);
   const [inputValue, setInputValue] = useState<string>('');
   const [progress, setProgress] = useState<number>(0);
-  const [chatCount, setChatCount] = useState<number>(0);
+  const [chatCount, setChatCount] = useState<number>(messages.filter((message:any) => !message.retry && message.type == "question").length);
   const maxChatQuestions = 5;
-  const [isLoading, setIsLoading] = useState<boolean>(false);
 
   function getUserUUID() {
     let userUUID = sessionStorage.getItem('userUUID');
@@ -110,14 +119,14 @@ export default function ApplicationProcessModal({
       // Assume the API returns a new question text
       const nextQuestionText = response?.data?.question || response?.data?.message;
 
-      const newCount = chatCount + 1;
+      let newCount = chatCount + (response?.data?.retry ? 0 : 1);
       setChatCount(newCount);
 
       if (newCount < maxChatQuestions) {
         // Continue asking further questions
         setMessages((prev: any) => [
           ...prev,
-          { id: `q-${newCount}`, type: 'question', text: nextQuestionText },
+          { id: `q-${newCount}`, type: 'question', text: nextQuestionText, retry: response?.data?.retry ?? false },
         ]);
       } else {
         // Append the final question
@@ -161,13 +170,19 @@ export default function ApplicationProcessModal({
       handleNextQuestion();
     }
   };
-
+  
   // Update progress when currentQuestionIndex changes
   useEffect(() => {
     const totalQuestions = maxChatQuestions;
     const newProgress = Math.round(((chatCount + 1) / totalQuestions) * 100);
     setProgress(newProgress);
   }, [chatCount]);
+
+  const handleRestart = () => {
+    setMessages([initialQuestion]);
+    setChatCount(1);
+    setIsRegistered(null);
+  }
 
   return (
     <Card className="w-full max-w-3xl mx-auto bg-gradient-to-b from-white to-blue-50 border-2 border-gray-200 shadow-lg rounded-2xl overflow-hidden">
@@ -221,7 +236,7 @@ export default function ApplicationProcessModal({
           )}
 
           {/* Registered users see Twitter login */}
-          {isRegistered === true ? (
+          {isRegistered === true && chatCount < maxChatQuestions ? (
             <ChatItemInterface
               chat={loginQuestion}
               isRegistered={isRegistered}
@@ -303,6 +318,13 @@ export default function ApplicationProcessModal({
                   </div>
                   <p className="text-xs text-gray-400 mt-1 ml-2">Press Enter to send</p>
                 </motion.div>
+              )}
+
+              {/* If chat is completed, show the restart button */}
+              {isRegistered === false && chatCount == maxChatQuestions && (
+                <Button onClick={handleRestart} className="mt-4 bg-blue-500 text-white">
+                  Restart Application
+                </Button>
               )}
             </>
           )}

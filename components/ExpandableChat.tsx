@@ -4,7 +4,6 @@ import React, { useState, useEffect, useRef } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar'
 import { useSelector } from 'react-redux'
-import { RootState } from '@/redux/store'
 import { GradientButton } from '@/components/ui/gradient-button'
 import moment from 'moment'
 import { dateConvert, shortenMessage } from '@/lib/utils'
@@ -64,10 +63,6 @@ interface ExpandableChatProps {
 }
 
 export default function ExpandableChat({ currentTime }: ExpandableChatProps) {
-  const conversations = useSelector((state: RootState) => state.agentActivity.conversations)
-  const time = useSelector((state: RootState) => state.agentActivity.time)
-  const date = useSelector((state: RootState) => state.agentActivity.date)
-
   const [isExpanded, setIsExpanded] = useState(false)
   const [messages, setMessages] = useState<Message[]>([])
   const [queue, setQueue] = useState<Message[]>([])
@@ -99,21 +94,6 @@ export default function ExpandableChat({ currentTime }: ExpandableChatProps) {
   useEffect(() => {
     addMessageToQueue('System', "Welcome to Kuro's World Chat Logs!", dateConvert(currentTime))
   }, [])
-
-  // Simulate incoming messages from conversations
-  useEffect(() => {
-    if ( conversations && Object.values(conversations).length > 0 ) {
-      const conversation = Object.values(conversations)[0]
-      
-      conversation.forEach((chats: Array<{name: string, text: string, reaction: string}>) => {
-        const length = chats.length
-        chats.forEach((chat, index) => {
-          const tDate = new Date(`${date} ${time}`)
-          if ( index < 4 && chat.text ) addMessageToQueue(chat.name, shortenMessage(chat.text), new Date(tDate.getTime() + index * Math.floor(30 * 60000.0 / length)))
-        })
-      })
-    }
-  }, [conversations])
 
   // Auto-scroll when expanded and messages update
   useEffect(() => {
