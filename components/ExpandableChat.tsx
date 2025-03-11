@@ -92,7 +92,7 @@ export default function ExpandableChat({ currentTime }: ExpandableChatProps) {
 
   // Simulate incoming messages
   useEffect(() => {
-    addMessageToQueue('System', "Welcome to Kuro's World Chat Logs!", dateConvert(currentTime))
+    addMessageToQueue('System', "For now our agents are waiting for the reawakening... This will happen on full $KURO launch day (March 12th).\nTogether with the token, the game will also go live.", dateConvert(currentTime))
   }, [])
 
   // Auto-scroll when expanded and messages update

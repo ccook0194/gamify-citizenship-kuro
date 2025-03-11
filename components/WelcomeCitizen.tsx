@@ -11,7 +11,7 @@ const WelcomeCitizen = ({ isOpen, onClose }: WelcomeCitizenProps) => {
   const shareOnTwitter = () => {
     const text = "I'm now officially a citizen of Kuro Universe! 🎉 Join me";
     const url = typeof window !== 'undefined' ? window.location.origin : '';
-    const hashtags = 'KuroUniverse,Citizenship';
+    const hashtags = 'kurocatuniverse';
 
     const params = new URLSearchParams({
       text,

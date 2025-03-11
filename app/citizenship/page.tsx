@@ -6,7 +6,7 @@ import { ArrowLeft } from 'lucide-react'
 import styles from '@/styles/back-button.module.css'
 import withAuth from '@/hoc/withAuth'
 
-const GamePage = () => {
+const CitizenshipPage = () => {
   return (
     <div className="fixed inset-0 overflow-hidden">
       <div className="absolute bottom-[3%] left-[3%] z-50">
@@ -21,4 +21,4 @@ const GamePage = () => {
   )
 }
 
-export default withAuth(GamePage)
+export default CitizenshipPage

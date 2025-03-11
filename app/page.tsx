@@ -28,39 +28,11 @@ export default function Home() {
         <h1 className="text-5xl font-bold [font-family:DynaPuff] text-[#53C3FF]">
           Kuro&apos;s Adventure
         </h1>
-        {authorized ? (
-          <p className="text-slate-700 text-lg">Choose your destination</p>
-        ) : (
-          <p className="text-slate-700 text-lg">Enter Security Code</p>
-        )}
+        <p className="text-slate-700 text-lg">Choose your destination</p>
       </div>
 
       <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
-        {authorized ? (
-          <>
-            <LandingButton href="/game">Game</LandingButton>
-          </>
-        ) : (
-          <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
-            <Input
-              className="text-black"
-              type="password"
-              name="password"
-              onChange={handlePasswordChange}
-              value={password}
-            ></Input>
-            {loading ? (
-              <div className="flex justify-center items-center gap-4">
-                <div className="w-8 h-8 border-4 border-slate-900 border-t-transparent rounded-full animate-spin"></div>
-                <span className="text-slate-900 font-['DynaPuff'] text-lg">Going...</span>
-              </div>
-            ) : (
-              <Button variant="outline" onClick={submitPassword}>
-                Go
-              </Button>
-            )}
-          </div>
-        )}
+        <LandingButton href="/citizenship">Citizenship</LandingButton>
       </div>
 
       <div className="absolute bottom-0 left-1/2 -translate-x-1/2">
