@@ -5,6 +5,7 @@ import './globals.css';
 import { SessionProvider } from 'next-auth/react';
 import ClientProviders from '@/components/ClientProviders/ClientProviders';
 import ImagesLinks from '@/utils/ImagesLinks';
+import MobileRestriction from "@/components/MobileRestriction";
 
 const title = "Kuro's Adventure";
 const description =
@@ -36,6 +37,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
     <html lang="en">
       <body className="bg-slate-900 text-slate-100 font-body">
         <ClientProviders>
+          <MobileRestriction />
           {children}
           <NoiseOverlay />
         </ClientProviders>
