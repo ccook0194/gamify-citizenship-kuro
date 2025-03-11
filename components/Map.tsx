@@ -52,6 +52,7 @@ import axios from 'axios';
 import { Alert } from './ui/alert';
 import MotionAlert from './MotionAlert';
 import { debounce } from 'lodash';
+import WelcomeCitizen from './WelcomeCitizen';
 
 // Custom scrollbar styling
 const customScrollbarStyles = `
@@ -434,7 +435,10 @@ const MapComponent = ({ weather }: MapProps) => {
 
   const [citizenshipApplication, setCitizenshipApplication] =
     useState<CitizenshipApplication | null>(null);
+  const [ifApplicationAppliedSuccessfully, setIfApplicationAppliedSuccessfully] = useState(false);
   const [showApplicationSuccessAlert, setShowApplicationSuccessAlert] = useState(false);
+  const [showWelcomeCitizen, setShowWelcomeCitizen] = useState(false);
+
   const audioRef = useRef<HTMLAudioElement>(null);
 
   const [isLoading, setIsLoading] = useState<boolean>(false);
@@ -493,41 +497,30 @@ const MapComponent = ({ weather }: MapProps) => {
     if (status === 'authenticated' && session?.user) {
       handleCitizenshipApplication(session.user);
     }
-  }, [status, session?.user]);
-
-  useEffect(() => {
-    if (citizenshipApplication?.twitter_id && citizenshipApplication?.status !== 'approved') {
-      checkApplicationStatusDebounced(citizenshipApplication.twitter_id);
-    }
-  }, [citizenshipApplication?.twitter_id, citizenshipApplication?.status]);
-
-  const checkApplicationStatusDebounced = useCallback(
-    debounce(async (twitterId: string) => {
-      await checkAIUpdatedApplicationStatus(twitterId);
-    }, 300),
-    []
-  );
+  }, [status]);
 
   async function checkAIUpdatedApplicationStatus(twitterId: string) {
-    setIsLoading(true);
+    if (!twitterId) {
+      console.error('Twitter ID is missing');
+      return;
+    }
+
     try {
       const response = await axios.get(`/api/mayor-review`, {
         params: { twitter_id: twitterId },
       });
 
-      if (response.data.status) {
-        await handleCitizenshipApplication(session?.user);
+      if (response?.data?.status === 'pending' || response?.data?.status === 'approved') {
+        setShowWelcomeCitizen(true);
       }
     } catch (error) {
-      setIsLoading(false);
       console.error('Error fetching citizenship status:', error);
-    } finally {
-      setIsLoading(false);
     }
+
+    await handleCitizenshipApplication(session?.user);
   }
 
   async function handleCitizenshipApplication(user: any) {
-    setIsLoading(true);
     try {
       const isExists = await checkIfCitizenshipApplicationExists(user.id);
       if (!isExists) {
@@ -535,8 +528,6 @@ const MapComponent = ({ weather }: MapProps) => {
       }
     } catch (error) {
       console.error('Error handling citizenship application:', error);
-    } finally {
-      setIsLoading(false);
     }
   }
 
@@ -551,6 +542,7 @@ const MapComponent = ({ weather }: MapProps) => {
         params: { twitter_id: twitterId },
       });
       setCitizenshipApplication(response?.data);
+
       return !!response?.data;
     } catch (error) {
       console.error('Error fetching citizenship status:', error);
@@ -564,6 +556,8 @@ const MapComponent = ({ weather }: MapProps) => {
       return;
     }
 
+    setShowApplicationSuccessAlert(true);
+
     try {
       await axios.post(`/api/citizenship/apply`, {
         twitter_id: user.id,
@@ -572,9 +566,10 @@ const MapComponent = ({ weather }: MapProps) => {
         messages,
       });
 
-      setShowApplicationSuccessAlert(true);
       sessionStorage.removeItem('applicationMessages');
+      setIfApplicationAppliedSuccessfully(true);
     } catch (error) {
+      setIfApplicationAppliedSuccessfully(false);
       console.error('Error applying for citizenship:', error);
     }
   }
@@ -895,7 +890,6 @@ const MapComponent = ({ weather }: MapProps) => {
         <div className="absolute" style={{ top: '2%', left: '2%', zIndex: 1100 }}>
           <KuroStatus
             citizenshipApplication={citizenshipApplication}
-            handleCitizenshipApplication={handleCitizenshipApplication}
             isLoading={isLoading}
             setIsLoading={setIsLoading}
           />
@@ -1109,10 +1103,16 @@ const MapComponent = ({ weather }: MapProps) => {
 
       {showApplicationSuccessAlert && (
         <MotionAlert
-          title="Congratulations"
-          message="You have successfully applied for citizenship in Kuro's Universe"
           onClose={() => setShowApplicationSuccessAlert(false)}
+          twitterId={citizenshipApplication?.twitter_id || session?.user.id || ''}
+          ifApplicationAppliedSuccessfully={ifApplicationAppliedSuccessfully}
+          checkAIUpdatedApplicationStatus={checkAIUpdatedApplicationStatus}
+          isLoading={isLoading}
         />
+      )}
+
+      {showWelcomeCitizen && (
+        <WelcomeCitizen isOpen={showWelcomeCitizen} onClose={() => setShowWelcomeCitizen(false)} />
       )}
     </>
   );

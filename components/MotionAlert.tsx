@@ -3,9 +3,11 @@ import { Twitter, FileText, UserCheck, Loader2 } from 'lucide-react';
 import { useState, useEffect } from 'react';
 
 interface AlertProps {
-  title: string;
-  message: string;
   onClose: () => void;
+  twitterId: string;
+  checkAIUpdatedApplicationStatus: (twitterId: string) => void;
+  ifApplicationAppliedSuccessfully: boolean;
+  isLoading: boolean;
 }
 
 const steps = [
@@ -26,7 +28,13 @@ const steps = [
   },
 ];
 
-const MotionAlert = ({ title, message, onClose }: AlertProps) => {
+const MotionAlert = ({
+  onClose,
+  twitterId,
+  checkAIUpdatedApplicationStatus,
+  ifApplicationAppliedSuccessfully,
+  isLoading,
+}: AlertProps) => {
   const [currentStep, setCurrentStep] = useState(0);
 
   useEffect(() => {
@@ -36,7 +44,7 @@ const MotionAlert = ({ title, message, onClose }: AlertProps) => {
         clearInterval(timer);
         return prev;
       });
-    }, 3000);
+    }, 4000);
 
     return () => clearInterval(timer);
   }, []);
@@ -89,16 +97,27 @@ const MotionAlert = ({ title, message, onClose }: AlertProps) => {
               );
             })}
 
-            {currentStep === steps.length - 1 && (
+            {!isLoading && currentStep === steps.length - 1 && (
               <motion.div
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
                 className="pt-4 border-t"
               >
-                <h4 className="font-title font-bold text-pink-600 text-lg mb-2">{title}</h4>
-                <p className="text-black/70 font-body mb-4">{message}</p>
+                <h4 className="font-title font-bold text-pink-600 text-lg mb-2">
+                  {ifApplicationAppliedSuccessfully ? 'Congratulations' : 'Sorry'}
+                </h4>
+                <p className="text-black/70 font-body mb-4">
+                  {ifApplicationAppliedSuccessfully
+                    ? "You have successfully applied for citizenship in Kuro's Universe"
+                    : 'Your application was not successful. Please try again later'}
+                </p>
                 <button
-                  onClick={onClose}
+                  onClick={() => {
+                    if (ifApplicationAppliedSuccessfully) {
+                      checkAIUpdatedApplicationStatus(twitterId);
+                    }
+                    onClose();
+                  }}
                   className="w-full bg-black text-white py-2 rounded-xl hover:bg-black/80 transition-colors font-medium"
                 >
                   Close

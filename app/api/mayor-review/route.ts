@@ -23,48 +23,47 @@ export async function GET(req: Request) {
       return NextResponse.json({ error: 'Missing twitter_id.' }, { status: 400 });
     }
 
-    // Fetch stored answers for the user
-    const userChats = await db
-      .select()
-      .from(mayorChats)
-      .where(eq(mayorChats.twitter_id, twitter_id));
+    const [userChats, applications] = await Promise.all([
+      db.select().from(mayorChats).where(eq(mayorChats.twitter_id, twitter_id)),
+      db
+        .select()
+        .from(citizenshipApplications)
+        .where(eq(citizenshipApplications.twitter_id, twitter_id)),
+    ]);
 
-    if (!userChats || userChats.length === 0) {
+    if (!userChats?.length) {
       return NextResponse.json({ error: 'No chat history found for the user.' }, { status: 404 });
     }
 
-    const { messages } = userChats[0] as { messages: any[] };
-
-    // Fetch the existing citizenship application
-    const result = await db
-      .select()
-      .from(citizenshipApplications)
-      .where(eq(citizenshipApplications.twitter_id, twitter_id));
-
-    if (!result.length) {
+    if (!applications?.length) {
       return NextResponse.json({ error: 'Citizenship application not found.' }, { status: 404 });
     }
 
-    const currentStatus = result[0].status as 'pending' | 'approved' | 'rejected';
+    const application = applications?.[0];
+    const currentStatus = application.status as 'pending' | 'approved' | 'rejected';
 
-    // If already approved, return early and do not modify the status
+    // If already approved, return early
     if (currentStatus === 'approved') {
       return NextResponse.json({
         status: 'approved',
-        status_remark: result[0].status_remark || 'Already approved.',
+        status_remark: application.status_remark || 'Already approved.',
       });
     }
 
-    const aiResponse = await analyzeAnswersWithAI(messages);
-    let evaluationResults = JSON.parse(aiResponse || '{}');
-    const correctPercentage = evaluationResults?.score || 0;
+    // Process AI analysis and Twitter completeness check in parallel
+    const [aiResponse, twitterCompleteness] = await Promise.all([
+      analyzeAnswersWithAI(userChats?.[0]?.messages as { question: string; answer: string }[]),
+      Promise.resolve(
+        checkTwitterDataCompleteness({
+          twitter_name: application.twitter_name,
+          twitter_username: application.twitter_username,
+          twitter_profile_picture: application.twitter_profile_picture,
+        })
+      ),
+    ]);
 
-    // Evaluate Twitter data completeness
-    const twitterCompleteness = checkTwitterDataCompleteness({
-      twitter_name: result[0].twitter_name,
-      twitter_username: result[0].twitter_username,
-      twitter_profile_picture: result[0].twitter_profile_picture,
-    });
+    const evaluationResults = JSON.parse(aiResponse || '{}');
+    const correctPercentage = evaluationResults?.score || 0;
 
     let status: 'pending' | 'approved' | 'rejected' = 'pending';
     let status_remark =
@@ -78,7 +77,7 @@ export async function GET(req: Request) {
       status = 'rejected';
     }
 
-    // Update user status in database (only if not approved)
+    // Update status if needed
     await db
       .update(citizenshipApplications)
       .set({ status, status_remark })
