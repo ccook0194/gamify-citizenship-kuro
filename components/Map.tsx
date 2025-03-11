@@ -460,15 +460,34 @@ const MapComponent = ({ weather }: MapProps) => {
     }
   }, [volume]);
 
+  // Funzione per aggiornare lo scale in base alle dimensioni del container
+  const updateScale = () => {
+    if (containerRef.current) {
+      const containerWidth = containerRef.current.offsetWidth;
+      const containerHeight = containerRef.current.offsetHeight;
+      
+      // Calcola lo scale necessario per riempire sia in larghezza che in altezza
+      // Usiamo Math.max per assicurarci che la mappa riempia completamente lo schermo
+      const scaleX = containerWidth / 1920;
+      const scaleY = containerHeight / 1080;
+      const baseScale = Math.max(scaleX, scaleY);
+      
+      // Aggiungiamo un fattore di zoom aggiuntivo (1.2) come nell'implementazione originale
+      // per mantenere la mappa leggermente ingrandita e permettere il panning
+      const newScale = baseScale * 1.2;
+      
+      setScale(newScale);
+    }
+  };
+
   useEffect(() => {
-    const updateScale = () => {
-      if (containerRef.current) {
-        const containerWidth = containerRef.current.offsetWidth;
-        setScale((containerWidth / 1920) * 1.2);
-      }
-    };
+    // Aggiorna lo scale iniziale
     updateScale();
+    
+    // Aggiungi event listener per il resize
     window.addEventListener('resize', updateScale);
+    
+    // Cleanup
     return () => window.removeEventListener('resize', updateScale);
   }, []);
 
